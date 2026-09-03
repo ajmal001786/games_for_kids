@@ -1,6 +1,9 @@
 import { getQuestions } from "../data/questions.js";
 
 const STORAGE_KEY = "builtToAutomate_askedQuestionIds";
+// Chosen difficulty level, written by the name/age setup screen.
+// Values: "easy" | "medium" | "hard". If unset/null, all questions are used.
+const LEVEL_KEY = "kidsGame_level";
 
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
@@ -8,6 +11,13 @@ function shuffle(arr) {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+}
+
+function loadLevel() {
+  try {
+    return localStorage.getItem(LEVEL_KEY) || null;
+  } catch { /* ignore */ }
+  return null;
 }
 
 function loadAskedIds() {
@@ -36,13 +46,24 @@ export class QuizSystem {
   }
 
   _refillPool() {
-    const all = getQuestions();
+    let all = getQuestions();
+
+    // Filter to the chosen difficulty level (age 7 = easy, 9 = medium, 11 = hard).
+    // Safety net: if the level is unset or no questions match it, fall back to all.
+    const level = loadLevel();
+    if (level) {
+      const filtered = all.filter((q) => q.level === level);
+      if (filtered.length > 0) all = filtered;
+    }
+
     const unseen = all.filter((q) => !this._askedIds.has(q.id));
 
     if (unseen.length >= 4) {
       this._pool = shuffle([...unseen]);
     } else {
-      this._askedIds.clear();
+      // Only clear the ids for the questions we're recycling, so other
+      // levels' history isn't wiped when this level runs out.
+      for (const q of all) this._askedIds.delete(q.id);
       saveAskedIds(this._askedIds);
       this._pool = shuffle([...all]);
     }
@@ -55,7 +76,9 @@ export class QuizSystem {
     this._askedIds.add(raw.id);
     saveAskedIds(this._askedIds);
 
-    const indices = [0, 1, 2, 3];
+    // Shuffle options for however many this question has (2, 3, or 4),
+    // and remap the correct-answer index to its new position.
+    const indices = raw.options.map((_, i) => i);
     shuffle(indices);
     const shuffledOptions = indices.map((i) => raw.options[i]);
     const newAnswer = indices.indexOf(raw.answer);
