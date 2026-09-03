@@ -1,0 +1,2921 @@
+import * as THREE from "three";
+import { LEVELS } from "../data/config.js";
+
+/** Trench `propsGroup` / wall scroll wrap period — deck greeble must tile at this Z period or the floor “flips” visibly. */
+const TRENCH_PROP_Z_PERIOD = 14;
+
+/** Automation ROI (G): one shared ocean shader on wide strips (scroll + curve with props). */
+const ROI_OCEAN_INNER_X = -12.45;
+const ROI_OCEAN_OUTER_X = -580;
+const ROI_OCEAN_VS = `
+  varying vec3 vWorldPos;
+  varying vec3 vLocalPos;
+  void main() {
+    vLocalPos = position;
+    vec4 wp = modelMatrix * vec4(position, 1.0);
+    vWorldPos = wp.xyz;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+const ROI_OCEAN_FS = `
+  varying vec3 vWorldPos;
+  varying vec3 vLocalPos;
+  uniform float uTime;
+
+  void main() {
+    float offshore = smoothstep(25.0, 210.0, -vLocalPos.x);
+    vec3 shoreBright = vec3(0.44, 0.89, 0.97);
+    vec3 mid = vec3(0.16, 0.55, 0.72);
+    vec3 deep = vec3(0.04, 0.24, 0.38);
+    vec3 col = mix(shoreBright, mid, offshore * 0.58);
+    col = mix(col, deep, offshore * offshore * 0.52);
+
+    float ahead = -vWorldPos.z;
+    float horizon = smoothstep(28.0, 210.0, ahead);
+    col *= mix(vec3(1.0), vec3(0.68, 0.76, 0.88), horizon * 0.62);
+
+    float w1 = sin(vWorldPos.x * 0.062 + uTime * 2.05);
+    float w2 = sin(vWorldPos.z * 0.052 + uTime * 1.7);
+    float w3 = sin((vWorldPos.x * 0.75 + vWorldPos.z) * 0.078 + uTime * 2.55);
+    float ripple = (w1 * 0.45 + w2 * 0.4 + w3 * 0.35) * 0.042;
+
+    gl_FragColor = vec4(col + ripple, 1.0);
+  }
+`;
+
+/**
+ * Themed roadway, lane markers, side props, billboards, skyline, horizon, lights.
+ * Accepts a level theme key ("A", "B", "C") to configure visuals.
+ */
+export class Track {
+  constructor(scene, levelId = "A") {
+    this.scene = scene;
+    this.group = new THREE.Group();
+    scene.add(this.group);
+    this.levelId = levelId;
+    this.theme = LEVELS[levelId] || LEVELS.A;
+    /** True only for Death Star Trench (not other hypothetical trench themes). */
+    this._isDeathStar = levelId === "DS";
+
+    this._curve = this.theme.curve || null;
+    this._scrollDist = 0;
+
+    /** @type {Object<string, THREE.Group>} */
+    this.billboards = {};
+    /** Trench floor group parented to propsGroup so it scrolls with walls (null otherwise). */
+    this._roadDeck = null;
+    /** Level G ocean strips share this material; `update` advances `uTime`. */
+    this._roiOceanMat = null;
+    /** Desert sand texture ref for scroll animation. */
+    this._desertSandMap = null;
+
+    this._road();
+    this._laneMarkers();
+    this._sideProps();
+    if (levelId !== "DS") {
+      this._billboards();
+    }
+    this._skyline();
+    this._horizon();
+    this._lights();
+  }
+
+  getCurveX(worldZ) {
+    if (!this._curve) return 0;
+    return this._curve.amplitude *
+      Math.sin((worldZ + this._scrollDist) * this._curve.frequency);
+  }
+
+  /** Speckled sand + roughness for Developer experience — avoids flat “carpet” albedo. */
+  _developerDesertSandTextures() {
+    if (this._devDesertSandTex) return this._devDesertSandTex;
+    const sz = 512;
+    const c = document.createElement("canvas");
+    c.width = sz;
+    c.height = sz;
+    const ctx = c.getContext("2d");
+    const g = ctx.createLinearGradient(0, 0, sz, sz);
+    g.addColorStop(0, "#dbc896");
+    g.addColorStop(0.5, "#d4b87a");
+    g.addColorStop(1, "#c9a870");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, sz, sz);
+    for (let i = 0; i < 14000; i++) {
+      const x = Math.random() * sz;
+      const y = Math.random() * sz;
+      const t = Math.random();
+      ctx.fillStyle =
+        t < 0.33
+          ? `rgba(120,95,55,${0.08 + Math.random() * 0.12})`
+          : t < 0.66
+            ? `rgba(210,190,140,${0.1 + Math.random() * 0.14})`
+            : `rgba(90,75,50,${0.06 + Math.random() * 0.1})`;
+      const s = 1 + Math.floor(Math.random() * 2.5);
+      ctx.fillRect(x, y, s, s);
+    }
+    const map = new THREE.CanvasTexture(c);
+    map.wrapS = map.wrapT = THREE.RepeatWrapping;
+    map.repeat.set(7, 11);
+    map.colorSpace = THREE.SRGBColorSpace;
+    map.anisotropy = 4;
+
+    const cr = document.createElement("canvas");
+    cr.width = sz;
+    cr.height = sz;
+    const rcx = cr.getContext("2d");
+    const rg = rcx.createImageData(sz, sz);
+    const d = rg.data;
+    for (let y = 0; y < sz; y++) {
+      for (let x = 0; x < sz; x++) {
+        const i = (y * sz + x) * 4;
+        const nx = x / sz;
+        const ny = y / sz;
+        const w =
+          Math.sin(nx * 31.7) * Math.cos(ny * 27.3) * 0.22 +
+          Math.sin(nx * 67 + ny * 13) * 0.12 +
+          Math.random() * 0.1 +
+          0.52;
+        const v = Math.max(0, Math.min(1, w)) * 255;
+        d[i] = d[i + 1] = d[i + 2] = v;
+        d[i + 3] = 255;
+      }
+    }
+    rcx.putImageData(rg, 0, 0);
+    const roughness = new THREE.CanvasTexture(cr);
+    roughness.wrapS = roughness.wrapT = THREE.RepeatWrapping;
+    roughness.repeat.set(7, 11);
+
+    this._devDesertSandTex = { map, roughness };
+    this._desertSandMap = map;
+    this._desertSandRoughnessMap = roughness;
+    return this._devDesertSandTex;
+  }
+
+  /** Tiny height variation on subdivided shoulder sand (XZ after plane rotation). */
+  _subtleDesertGroundRipple(geometry) {
+    const pos = geometry.attributes.position;
+    if (!pos) return;
+    for (let i = 0; i < pos.count; i++) {
+      const lx = pos.getX(i);
+      const ly = pos.getY(i);
+      const nx = lx * 0.14;
+      const ny = ly * 0.018;
+      const bump =
+        Math.sin(nx + ny * 0.7) * 0.045 +
+        Math.sin(nx * 2.1 - ny * 1.3) * 0.028 +
+        Math.sin(nx * 0.4 + ny * 0.55) * 0.032;
+      pos.setZ(i, bump);
+    }
+    pos.needsUpdate = true;
+    geometry.computeVertexNormals();
+  }
+
+  _road() {
+    const t = this.theme;
+    /** No asphalt berm past yellow lines — terrain meets road at ±6 */
+    const desertNarrowRoad =
+      this.levelId === "C" && t.scenery === "desert" && !this._isDeathStar;
+    const narrowRoad = desertNarrowRoad || ((this.levelId === "D" || this.levelId === "F") && !this._isDeathStar);
+    this._roadHalfWidth = narrowRoad ? 6 : 11;
+    const roadPlaneW = narrowRoad ? 12 : 22;
+    const curvedRoadW = narrowRoad ? (24 * roadPlaneW) / 22 : 24;
+
+    const roadMat = new THREE.MeshStandardMaterial({
+      color: t.road, metalness: t.scenery === "trench" ? 0.35 : 0.15,
+      roughness: t.scenery === "trench" ? 0.78 : 0.88,
+      emissive: t.roadEmissive,
+      emissiveIntensity: t.scenery === "trench" ? 0.06 : 0.12,
+      flatShading: t.scenery === "trench",
+    });
+    this._roadMat = roadMat;
+    this._roadOrigColor = roadMat.color.getHex();
+    this._roadOrigEmissive = roadMat.emissive.getHex();
+    this._rainbowMode = false;
+
+    if (this._curve) {
+      this._roadSegGroup = new THREE.Group();
+      this.group.add(this._roadSegGroup);
+      this._roadSegSpacing = 4;
+      this._roadSegCount = 100;
+      for (let i = 0; i < this._roadSegCount; i++) {
+        const seg = new THREE.Mesh(
+          new THREE.PlaneGeometry(curvedRoadW, this._roadSegSpacing + 0.6),
+          roadMat
+        );
+        seg.rotation.x = -Math.PI / 2;
+        seg.position.set(0, 0, -200 + i * this._roadSegSpacing);
+        seg.receiveShadow = true;
+        this._roadSegGroup.add(seg);
+      }
+    } else {
+      /** Trench deck + greeble scroll with props; otherwise the floor looks “stuck” while walls move. */
+      const trenchDeck = !this._curve && t.scenery === "trench";
+      this._roadDeck = trenchDeck ? new THREE.Group() : null;
+      const deck = this._roadDeck || this.group;
+      const road = new THREE.Mesh(
+        new THREE.PlaneGeometry(roadPlaneW, 400), roadMat
+      );
+      road.rotation.x = -Math.PI / 2;
+      road.position.y = 0;
+      road.receiveShadow = true;
+      deck.add(road);
+      if (t.scenery === "trench") {
+        this._addTrenchFloorGreeble(deck);
+      }
+    }
+
+    this._edgeSpacing = this._curve ? 5 : 20;
+    this._edgeCount = this._curve ? 80 : 24;
+    this._edgeMeshes = [];
+    if (!this._isDeathStar) {
+      this.edgeGroup = new THREE.Group();
+      this.group.add(this.edgeGroup);
+      const edgeEmissiveInt = t.scenery === "trench" ? 0.22 : 0.6;
+      const edgeMat = new THREE.MeshStandardMaterial({
+        color: t.edge, emissive: t.edgeEmissive, emissiveIntensity: edgeEmissiveInt,
+        flatShading: t.scenery === "trench",
+      });
+      this._edgeMat = edgeMat;
+      this._edgeOrigColor = edgeMat.color.getHex();
+      this._edgeOrigEmissive = edgeMat.emissive.getHex();
+      for (let i = 0; i < this._edgeCount; i++) {
+        const z = -200 + i * this._edgeSpacing;
+        const el = new THREE.Mesh(
+          new THREE.BoxGeometry(0.35, 0.08, this._edgeSpacing), edgeMat
+        );
+        el.position.set(-5.8, 0.05, z);
+        el.userData.baseX = -5.8;
+        this.edgeGroup.add(el);
+        const er = el.clone();
+        er.position.x = 5.8;
+        er.userData.baseX = 5.8;
+        this.edgeGroup.add(er);
+        this._edgeMeshes.push(el, er);
+      }
+    } else {
+      this.edgeGroup = null;
+      this._edgeMat = null;
+    }
+
+    // Beside the deck: flat planes (other themes) or solid low aprons (Death Star — reads as volume, not black sheets)
+    const surf = this._roadDeck || this.group;
+    if (t.scenery !== "city" && t.scenery !== "durham") {
+      if (this._isDeathStar) {
+        const apronMat = new THREE.MeshStandardMaterial({
+          color: 0x5a6570,
+          emissive: 0x455059,
+          emissiveIntensity: 0.08,
+          roughness: 0.84,
+          metalness: 0.4,
+          flatShading: true,
+        });
+        const apLen = 400;
+        const apW = 36;
+        const apH = 0.85;
+        const innerHalf = 11;
+        const leftCx = -(innerHalf + apW / 2);
+        const apronL = new THREE.Mesh(new THREE.BoxGeometry(apW, apH, apLen), apronMat);
+        apronL.position.set(leftCx, -apH * 0.5 + 0.06, 0);
+        apronL.receiveShadow = true;
+        surf.add(apronL);
+        const apronR = new THREE.Mesh(new THREE.BoxGeometry(apW, apH, apLen), apronMat.clone());
+        apronR.position.set(-leftCx, -apH * 0.5 + 0.06, 0);
+        apronR.receiveShadow = true;
+        surf.add(apronR);
+      } else {
+        const sandTex = desertNarrowRoad ? this._developerDesertSandTextures() : null;
+        const groundMat = new THREE.MeshStandardMaterial({
+          color: t.side, emissive: t.sideEmissive,
+          emissiveIntensity: desertNarrowRoad
+            ? 0.04
+            : (t.scenery === "trench" ? 0.08 : 0.15),
+          roughness: desertNarrowRoad ? 0.99 : (t.scenery === "trench" ? 0.92 : 0.95),
+          metalness: t.scenery === "trench" ? 0.25 : 0,
+          flatShading: t.scenery === "trench",
+        });
+        if (sandTex) {
+          groundMat.map = sandTex.map;
+          groundMat.roughnessMap = sandTex.roughness;
+        }
+        const gw = this._curve ? 100 : 80;
+        /** Workflow (B): tuck field so inner grass ~±6. Else match inner berm to road outer edge. */
+        const gx =
+          this.levelId === "B" && t.scenery === "forest"
+            ? 46
+            : gw / 2 + this._roadHalfWidth;
+        const groundY =
+          narrowRoad ? -0.003 : -0.02;
+        const gSegX = desertNarrowRoad ? 18 : 1;
+        const gSegZ = desertNarrowRoad ? 64 : 1;
+        const groundL = new THREE.Mesh(
+          new THREE.PlaneGeometry(gw, 400, gSegX, gSegZ),
+          groundMat
+        );
+        groundL.rotation.x = -Math.PI / 2;
+        groundL.position.set(-gx, groundY, 0);
+        if (desertNarrowRoad) this._subtleDesertGroundRipple(groundL.geometry);
+        surf.add(groundL);
+        const groundR = new THREE.Mesh(
+          new THREE.PlaneGeometry(gw, 400, gSegX, gSegZ),
+          groundMat.clone()
+        );
+        if (sandTex) {
+          groundR.material.map = sandTex.map;
+          groundR.material.roughnessMap = sandTex.roughness;
+        }
+        groundR.rotation.x = -Math.PI / 2;
+        groundR.position.set(gx, groundY, 0);
+        if (desertNarrowRoad) this._subtleDesertGroundRipple(groundR.geometry);
+        surf.add(groundR);
+
+        if (this.levelId === "B" && t.scenery === "forest") {
+          const shoulderH = 0.06;
+          const shoulderY = shoulderH * 0.5 + 0.02;
+          /** Past lane-edge strips (±5.8) to outer road ±11 — kills gray asphalt berm */
+          const inner = 5.82;
+          const outer = 11.02;
+          const sw = outer - inner;
+          const shrub = new THREE.MeshStandardMaterial({
+            color: t.side,
+            emissive: t.sideEmissive,
+            emissiveIntensity: 0.22,
+            roughness: 0.9,
+            metalness: 0,
+          });
+          const shl = new THREE.Mesh(
+            new THREE.BoxGeometry(sw, shoulderH, 400),
+            shrub
+          );
+          shl.receiveShadow = true;
+          shl.position.set(-(inner + sw / 2), shoulderY, 0);
+          surf.add(shl);
+          const shr = new THREE.Mesh(
+            new THREE.BoxGeometry(sw, shoulderH, 400),
+            shrub
+          );
+          shr.receiveShadow = true;
+          shr.position.set(inner + sw / 2, shoulderY, 0);
+          surf.add(shr);
+        }
+      }
+    }
+  }
+
+  _laneMarkers() {
+    if (this._isDeathStar) {
+      this.markerGroup = null;
+      this._markerMeshes = [];
+      this._markerSpacing = 8;
+      return;
+    }
+
+    this.markerGroup = new THREE.Group();
+    this.group.add(this.markerGroup);
+
+    const isTrench = this.theme.scenery === "trench";
+    const mat = new THREE.MeshBasicMaterial({
+      color: this.theme.laneMarker,
+      transparent: true,
+      opacity: isTrench ? 0.45 : 0.85,
+    });
+    this._markerSpacing = this._curve ? 4 : isTrench ? 6 : 8;
+    this._markerCount = this._curve ? 100 : isTrench ? 52 : 40;
+    this._markerMeshes = [];
+    for (let i = 0; i < this._markerCount; i++) {
+      const z = -200 + i * this._markerSpacing;
+      for (const x of [-1.6, 1.6]) {
+        const m = new THREE.Mesh(
+          new THREE.BoxGeometry(0.12, 0.02, this._markerSpacing * 0.4), mat
+        );
+        m.position.set(x, 0.03, z);
+        m.userData.baseX = x;
+        this.markerGroup.add(m);
+        this._markerMeshes.push(m);
+      }
+    }
+  }
+
+  /** Raised seams + deck plates (low-poly Rogue Squadron vibe). */
+  _addTrenchFloorGreeble(parent = this.group) {
+    const seamMat = new THREE.MeshStandardMaterial({
+      color: 0x35363c, roughness: 0.9, metalness: 0.4,
+      emissive: 0x08080a, emissiveIntensity: 0.04, flatShading: true,
+    });
+    const plateMat = new THREE.MeshStandardMaterial({
+      color: 0x42444c, roughness: 0.88, metalness: 0.38,
+      emissive: 0x0a0a0e, emissiveIntensity: 0.05, flatShading: true,
+    });
+    if (this._isDeathStar) {
+      this._addDeathStarPeriodicDeckGreeble(parent, seamMat, plateMat);
+      return;
+    }
+    for (let i = 0; i < 55; i++) {
+      const z = -198 + i * 7.2;
+      const seam = new THREE.Mesh(
+        new THREE.BoxGeometry(21.8, 0.035, 0.09),
+        seamMat
+      );
+      seam.position.set(0, 0.018, z);
+      parent.add(seam);
+    }
+    for (let row = 0; row < 42; row++) {
+      const z = -196 + row * 9.2;
+      for (const side of [-1, 1]) {
+        for (let k = 0; k < 4; k++) {
+          const x = side * (3.15 + k * 0.95);
+          if (Math.random() < 0.22) continue;
+          const dz = 1.4 + Math.random() * 1.8;
+          const h = 0.04 + Math.random() * 0.05;
+          const plate = new THREE.Mesh(
+            new THREE.BoxGeometry(0.85 + Math.random() * 0.35, h, dz),
+            plateMat
+          );
+          plate.position.set(x + (Math.random() - 0.5) * 0.15, 0.02 + h / 2, z + (Math.random() - 0.5) * 2);
+          parent.add(plate);
+        }
+      }
+    }
+  }
+
+  /**
+   * Death Star deck detail that repeats every `TRENCH_PROP_Z_PERIOD` units — matches
+   * `propsGroup` wrap so scrolling looks continuous, not flip-book jumps.
+   */
+  _addDeathStarPeriodicDeckGreeble(parent, seamMat, plateMat) {
+    const P = TRENCH_PROP_Z_PERIOD;
+    const zMin = -224;
+    const nCells = 34;
+    for (let i = 0; i <= nCells; i++) {
+      const z = zMin + i * P;
+      const seam = new THREE.Mesh(
+        new THREE.BoxGeometry(21.8, 0.035, 0.09),
+        seamMat
+      );
+      seam.position.set(0, 0.018, z);
+      parent.add(seam);
+    }
+    /** Same plate layout in every length-P cell (world Z + n·P looks identical). */
+    const cellPlates = [
+      { x: -2.95, z: 3.4, w: 0.92, h: 0.048, d: 2.15 },
+      { x: 2.95, z: 4.1, w: 0.88, h: 0.042, d: 1.95 },
+      { x: -3.2, z: 8.6, w: 1.05, h: 0.055, d: 2.45 },
+      { x: 3.05, z: 9.8, w: 0.78, h: 0.038, d: 1.65 },
+      { x: -1.15, z: 6.2, w: 0.7, h: 0.04, d: 1.55 },
+      { x: 1.2, z: 11.5, w: 0.82, h: 0.045, d: 1.85 },
+    ];
+    for (let gi = 0; gi < nCells; gi++) {
+      const z0 = zMin + gi * P;
+      for (const cp of cellPlates) {
+        const plate = new THREE.Mesh(
+          new THREE.BoxGeometry(cp.w, cp.h, cp.d),
+          plateMat
+        );
+        plate.position.set(cp.x, 0.02 + cp.h * 0.5, z0 + cp.z);
+        parent.add(plate);
+      }
+    }
+  }
+
+  _sideProps() {
+    this.propsGroup = new THREE.Group();
+    this.group.add(this.propsGroup);
+    if (this._roadDeck) {
+      this.propsGroup.add(this._roadDeck);
+    }
+    this._propSpacing = TRENCH_PROP_Z_PERIOD;
+    this._propCount = 28;
+    this._propSlots = [];
+
+    const s = this.theme.scenery;
+    if (s === "city" || s === "durham") this._cityProps();
+    else if (s === "forest") this._forestProps();
+    else if (s === "desert") this._desertProps();
+    else if (s === "swamp") this._swampProps();
+    else if (s === "snow") this._snowProps();
+    else if (s === "water") this._waterProps();
+    else if (s === "coast") this._coastProps();
+    else if (s === "trench") this._trenchProps();
+
+    // Total wrap range for props
+    this._propTotalRange = this._propSpacing * this._propCount;
+  }
+
+  _cityProps() {
+    const rackMat = new THREE.MeshStandardMaterial({
+      color: 0x3d4658, metalness: 0.42, roughness: 0.52,
+      emissive: 0x0c1830, emissiveIntensity: 0.55,
+    });
+    const poleMat = new THREE.MeshStandardMaterial({
+      color: 0x4a5068, metalness: 0.35, roughness: 0.55,
+      emissive: 0x1a1038, emissiveIntensity: 0.4,
+    });
+    for (let i = 0; i < this._propCount; i++) {
+      const z = -200 + i * this._propSpacing;
+      const rack = new THREE.Mesh(
+        new THREE.BoxGeometry(1.2, 3 + Math.random() * 1.5, 1.5), rackMat
+      );
+      rack.position.set(-8.5, 1.5, z);
+      this.propsGroup.add(rack);
+      const rack2 = rack.clone();
+      rack2.position.x = 8.5;
+      this.propsGroup.add(rack2);
+
+      const pole = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.15, 0.2, 5, 6), poleMat
+      );
+      pole.position.set(-11, 2.5, z + 4);
+      this.propsGroup.add(pole);
+      const pole2 = pole.clone();
+      pole2.position.x = 11;
+      this.propsGroup.add(pole2);
+    }
+  }
+
+  _forestProps() {
+    /** Workflow orchestration (B): shorter trees so billboards stay visible */
+    const ts = this.levelId === "B" ? 0.68 : 1;
+    const trunkMat = new THREE.MeshStandardMaterial({
+      color: 0x5c3a1a, roughness: 0.9, metalness: 0.05,
+    });
+    const leafMat = new THREE.MeshStandardMaterial({
+      color: 0x2d6b30, roughness: 0.8, metalness: 0.05,
+      emissive: 0x0a2a0a, emissiveIntensity: 0.2,
+    });
+    for (let i = 0; i < this._propCount; i++) {
+      const z = -200 + i * this._propSpacing;
+      const slot = new THREE.Group();
+      slot.position.z = z;
+      this.propsGroup.add(slot);
+      this._propSlots.push(slot);
+
+      for (const side of [-1, 1]) {
+        const x = side * (8 + Math.random() * 5);
+        const trunkH = (3 + Math.random() * 2) * ts;
+        const trunk = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.2 * ts, 0.35 * ts, trunkH, 6), trunkMat
+        );
+        trunk.position.set(x, trunkH / 2, Math.random() * 4);
+        slot.add(trunk);
+
+        const crownR = (1.2 + Math.random() * 1) * ts;
+        const crown = new THREE.Mesh(
+          new THREE.SphereGeometry(crownR, 6, 5), leafMat
+        );
+        crown.position.set(x, trunkH + crownR * 0.5, trunk.position.z);
+        slot.add(crown);
+
+        if (Math.random() < 0.4) {
+          const x2 = side * (14 + Math.random() * 4);
+          const h2 = (2 + Math.random() * 3) * ts;
+          const t2 = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.15 * ts, 0.3 * ts, h2, 6), trunkMat
+          );
+          t2.position.set(x2, h2 / 2, 3);
+          slot.add(t2);
+          const c2 = new THREE.Mesh(
+            new THREE.SphereGeometry((1 + Math.random() * 0.8) * ts, 6, 5), leafMat
+          );
+          c2.position.set(x2, h2 + 0.5 * ts, 3);
+          slot.add(c2);
+        }
+      }
+
+      // Decorative sheep on roadsides (level B only)
+      if (this.levelId === "B" && Math.random() < 0.35) {
+        const sheep = this._makeSideSheep();
+        const side = Math.random() < 0.5 ? -1 : 1;
+        sheep.position.set(side * (5.5 + Math.random() * 3), 0, Math.random() * 6);
+        sheep.rotation.y = Math.random() * Math.PI * 2;
+        slot.add(sheep);
+        if (Math.random() < 0.5) {
+          const sheep2 = this._makeSideSheep();
+          sheep2.position.set(side * (6 + Math.random() * 4), 0, 2 + Math.random() * 4);
+          sheep2.rotation.y = Math.random() * Math.PI * 2;
+          slot.add(sheep2);
+        }
+      }
+    }
+  }
+
+  _makeSideSheep() {
+    const g = new THREE.Group();
+    const wool = new THREE.MeshStandardMaterial({
+      color: 0xf5f0e8, roughness: 0.95, metalness: 0.0,
+      emissive: 0x444038, emissiveIntensity: 0.15,
+    });
+    const face = new THREE.MeshStandardMaterial({
+      color: 0x2a2018, roughness: 0.85, metalness: 0.05,
+      emissive: 0x0a0804, emissiveIntensity: 0.2,
+    });
+    const legMat = new THREE.MeshStandardMaterial({
+      color: 0x1a1510, roughness: 0.9, metalness: 0.05,
+    });
+
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 7, 5), wool);
+    body.scale.set(1.1, 0.85, 1.3);
+    body.position.set(0, 0.55, 0);
+    g.add(body);
+
+    for (let i = 0; i < 4; i++) {
+      const tuft = new THREE.Mesh(new THREE.SphereGeometry(0.22, 5, 4), wool);
+      tuft.position.set((Math.random() - 0.5) * 0.5, 0.6 + Math.random() * 0.1, (Math.random() - 0.5) * 0.55);
+      g.add(tuft);
+    }
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 6, 5), face);
+    head.position.set(0, 0.65, -0.6);
+    g.add(head);
+
+    for (const side of [-0.15, 0.15]) {
+      const ear = new THREE.Mesh(new THREE.SphereGeometry(0.08, 4, 3), face);
+      ear.position.set(side, 0.72, -0.5);
+      g.add(ear);
+    }
+
+    const legs = [
+      { x: -0.28, z: -0.28 }, { x: 0.28, z: -0.28 },
+      { x: -0.28, z: 0.28 }, { x: 0.28, z: 0.28 },
+    ];
+    for (const lp of legs) {
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.4, 5), legMat);
+      leg.position.set(lp.x, 0.2, lp.z);
+      g.add(leg);
+    }
+
+    const tail = new THREE.Mesh(new THREE.SphereGeometry(0.12, 5, 4), wool);
+    tail.position.set(0, 0.55, 0.55);
+    g.add(tail);
+
+    g.scale.set(1.3, 1.3, 1.3);
+    return g;
+  }
+
+  _desertProps() {
+    const cactusMat = new THREE.MeshStandardMaterial({
+      color: 0x3a7a3a, roughness: 0.85, metalness: 0.05,
+      emissive: 0x0a200a, emissiveIntensity: 0.15,
+    });
+    const rockMat = new THREE.MeshStandardMaterial({
+      color: 0xb09060, roughness: 0.92, metalness: 0.05,
+    });
+    for (let i = 0; i < this._propCount; i++) {
+      const z = -200 + i * this._propSpacing;
+      const slot = new THREE.Group();
+      slot.position.z = z;
+      this.propsGroup.add(slot);
+      this._propSlots.push(slot);
+
+      for (const side of [-1, 1]) {
+        const x = side * (8 + Math.random() * 6);
+        if (Math.random() < 0.6) {
+          const h = 2 + Math.random() * 3;
+          const cactus = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.25, 0.3, h, 8), cactusMat
+          );
+          cactus.position.set(x, h / 2, Math.random() * 3);
+          slot.add(cactus);
+          if (h > 3) {
+            const armH = 1 + Math.random();
+            const arm = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.12, 0.15, armH, 6), cactusMat
+            );
+            arm.position.set(x + side * 0.5, h * 0.6, cactus.position.z);
+            arm.rotation.z = side * -0.8;
+            slot.add(arm);
+          }
+        } else {
+          const rw = 0.8 + Math.random() * 1.5;
+          const rh = 0.5 + Math.random() * 1;
+          const rock = new THREE.Mesh(
+            new THREE.DodecahedronGeometry(rw, 0), rockMat
+          );
+          rock.position.set(x, rh * 0.3, Math.random() * 3);
+          rock.scale.set(1, rh / rw, 1);
+          slot.add(rock);
+        }
+      }
+    }
+  }
+
+  _swampProps() {
+    /** Governance & compliance (D): shorter trees so billboards stay visible */
+    const ts = this.levelId === "D" ? 0.68 : 1;
+    const trunkMat = new THREE.MeshStandardMaterial({
+      color: 0x3a2a1a, roughness: 0.95, metalness: 0.05,
+    });
+    const mossLeafMat = new THREE.MeshStandardMaterial({
+      color: 0x3a6630, roughness: 0.85, metalness: 0.05,
+      emissive: 0x0a1a0a, emissiveIntensity: 0.15,
+    });
+    const lillyMat = new THREE.MeshStandardMaterial({
+      color: 0x2a5530, roughness: 0.9, metalness: 0.05,
+    });
+    const waterMat = new THREE.MeshStandardMaterial({
+      color: 0x2a4a30, roughness: 0.6, metalness: 0.2,
+      transparent: true, opacity: 0.5,
+    });
+    for (let i = 0; i < this._propCount; i++) {
+      const z = -200 + i * this._propSpacing;
+      const slot = new THREE.Group();
+      slot.position.z = z;
+      this.propsGroup.add(slot);
+      this._propSlots.push(slot);
+
+      for (const side of [-1, 1]) {
+        const x = side * (8 + Math.random() * 5);
+        const trunkH = (2.5 + Math.random() * 2) * ts;
+        const trunk = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.15 * ts, 0.3 * ts, trunkH, 6), trunkMat
+        );
+        trunk.position.set(x, trunkH / 2, Math.random() * 3);
+        trunk.rotation.z = (Math.random() - 0.5) * 0.3;
+        slot.add(trunk);
+
+        const crownR = (1.5 + Math.random() * 1) * ts;
+        const crown = new THREE.Mesh(
+          new THREE.SphereGeometry(crownR, 6, 5), mossLeafMat
+        );
+        crown.position.set(x, trunkH + crownR * 0.3, trunk.position.z);
+        slot.add(crown);
+
+        // hanging moss
+        for (let m = 0; m < 3; m++) {
+          const vine = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.02, 0.02, (0.8 + Math.random() * 0.6) * ts, 4),
+            mossLeafMat
+          );
+          vine.position.set(
+            x + (Math.random() - 0.5) * crownR,
+            trunkH - 0.2 - Math.random() * 0.4,
+            trunk.position.z + (Math.random() - 0.5) * crownR
+          );
+          slot.add(vine);
+        }
+
+        // water puddles
+        if (Math.random() < 0.5) {
+          const puddle = new THREE.Mesh(
+            new THREE.CylinderGeometry(1 + Math.random(), 1 + Math.random(), 0.05, 8), waterMat
+          );
+          puddle.position.set(side * (12 + Math.random() * 4), 0.02, Math.random() * 4);
+          slot.add(puddle);
+          // lilly pad
+          const pad = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.3, 0.3, 0.04, 8), lillyMat
+          );
+          pad.position.set(puddle.position.x + 0.5, 0.05, puddle.position.z);
+          slot.add(pad);
+        }
+      }
+    }
+  }
+
+  _snowProps() {
+    const trunkMat = new THREE.MeshStandardMaterial({
+      color: 0x4a3a2a, roughness: 0.9, metalness: 0.05,
+    });
+    const pineMat = new THREE.MeshStandardMaterial({
+      color: 0x1a4a2a, roughness: 0.85, metalness: 0.05,
+      emissive: 0x0a1a08, emissiveIntensity: 0.15,
+    });
+    const snowCapMat = new THREE.MeshStandardMaterial({
+      color: 0xeef4ff, roughness: 0.6, metalness: 0.1,
+      emissive: 0x445566, emissiveIntensity: 0.1,
+    });
+    const snowPileMat = new THREE.MeshStandardMaterial({
+      color: 0xdde8f0, roughness: 0.7, metalness: 0.05,
+    });
+    for (let i = 0; i < this._propCount; i++) {
+      const z = -200 + i * this._propSpacing;
+      const slot = new THREE.Group();
+      slot.position.z = z;
+      this.propsGroup.add(slot);
+      this._propSlots.push(slot);
+
+      for (const side of [-1, 1]) {
+        const x = side * (8 + Math.random() * 5);
+        const treeH = 3 + Math.random() * 3;
+
+        // pine tree: trunk + stacked cones
+        const trunk = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.15, 0.25, treeH * 0.4, 6), trunkMat
+        );
+        trunk.position.set(x, treeH * 0.2, Math.random() * 3);
+        slot.add(trunk);
+
+        for (let tier = 0; tier < 3; tier++) {
+          const coneR = (1.6 - tier * 0.4) + Math.random() * 0.3;
+          const coneH = treeH * 0.35;
+          const cone = new THREE.Mesh(
+            new THREE.ConeGeometry(coneR, coneH, 6), pineMat
+          );
+          cone.position.set(x, treeH * 0.3 + tier * coneH * 0.5, trunk.position.z);
+          slot.add(cone);
+        }
+
+        // snow cap on top
+        const cap = new THREE.Mesh(
+          new THREE.ConeGeometry(0.5, 0.6, 6), snowCapMat
+        );
+        cap.position.set(x, treeH * 0.3 + 1.5 * (treeH * 0.35) * 0.5 + 0.3, trunk.position.z);
+        slot.add(cap);
+
+        // snow piles
+        if (Math.random() < 0.4) {
+          const pile = new THREE.Mesh(
+            new THREE.SphereGeometry(0.6 + Math.random() * 0.5, 6, 4), snowPileMat
+          );
+          pile.position.set(side * (13 + Math.random() * 3), 0.2, Math.random() * 4);
+          pile.scale.y = 0.4;
+          slot.add(pile);
+        }
+      }
+    }
+  }
+
+  _waterProps() {
+    const trunkMat = new THREE.MeshStandardMaterial({
+      color: 0x8a6a3a, roughness: 0.9, metalness: 0.05,
+    });
+    const leafMat = new THREE.MeshStandardMaterial({
+      color: 0x2a8a3a, roughness: 0.75, metalness: 0.05,
+      emissive: 0x0a2a0a, emissiveIntensity: 0.15,
+    });
+    const sandMat = new THREE.MeshStandardMaterial({
+      color: 0xd4c090, roughness: 0.92, metalness: 0.05,
+    });
+    /** Network & infra (E): continuous beach between palms and open water (GridHelper horizon). */
+    const beachWideMat = new THREE.MeshStandardMaterial({
+      color: 0xdcbe90, roughness: 0.9, metalness: 0.02,
+    });
+    const beachWetMat = new THREE.MeshStandardMaterial({
+      color: 0xc9a972, roughness: 0.88, metalness: 0.03,
+    });
+    const isInfraOcean = this.levelId === "E";
+    for (let i = 0; i < this._propCount; i++) {
+      const z = -200 + i * this._propSpacing;
+      const slot = new THREE.Group();
+      slot.position.z = z;
+      this.propsGroup.add(slot);
+      this._propSlots.push(slot);
+
+      if (isInfraOcean) {
+        const dz = this._propSpacing + 0.5;
+        /** Thin shoulder sand: starts just past edge strips (±5.8); ends before open water grid (deck ±11). */
+        const innerAbs = 6.05;
+        const outerAbs = 12.4;
+        const stripW = outerAbs - innerAbs;
+        const cx = innerAbs + stripW / 2;
+        /** Above GridHelper at y≈0.01 */
+        const beachY = 0.038;
+        for (const side of [-1, 1]) {
+          const wide = new THREE.Mesh(
+            new THREE.BoxGeometry(stripW, 0.1, dz),
+            beachWideMat
+          );
+          wide.position.set(side * cx, beachY, 0);
+          slot.add(wide);
+          const wet = new THREE.Mesh(
+            new THREE.BoxGeometry(Math.max(1.1, stripW * 0.35), 0.07, dz - 0.2),
+            beachWetMat
+          );
+          wet.position.set(side * (outerAbs - stripW * 0.22), beachY - 0.006, 0);
+          slot.add(wet);
+        }
+      }
+
+      for (const side of [-1, 1]) {
+        const x = side * (8 + Math.random() * 5);
+        const trunkH = 4 + Math.random() * 3;
+
+        // curved palm trunk (slightly leaning)
+        const trunk = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.15, 0.25, trunkH, 6), trunkMat
+        );
+        trunk.position.set(x, trunkH / 2, Math.random() * 3);
+        trunk.rotation.z = side * (0.1 + Math.random() * 0.15);
+        trunk.rotation.x = (Math.random() - 0.5) * 0.1;
+        slot.add(trunk);
+
+        // palm fronds (elongated flat leaves radiating from top)
+        const topX = x + side * trunkH * Math.sin(trunk.rotation.z) * 0.3;
+        const topY = trunkH * 0.95;
+        for (let f = 0; f < 6; f++) {
+          const angle = (f / 6) * Math.PI * 2;
+          const frondLen = 1.5 + Math.random() * 1;
+          const frond = new THREE.Mesh(
+            new THREE.BoxGeometry(0.4, 0.06, frondLen), leafMat
+          );
+          frond.position.set(
+            topX + Math.cos(angle) * frondLen * 0.4,
+            topY - 0.2 - Math.abs(Math.cos(angle)) * 0.5,
+            trunk.position.z + Math.sin(angle) * frondLen * 0.4
+          );
+          frond.rotation.y = angle;
+          frond.rotation.x = 0.4 + Math.random() * 0.3;
+          slot.add(frond);
+        }
+
+        // sand patch at base
+        if (Math.random() < 0.5) {
+          const sand = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.8 + Math.random() * 0.5, 1 + Math.random() * 0.5, 0.06, 8),
+            sandMat
+          );
+          sand.position.set(x, 0.02, trunk.position.z);
+          slot.add(sand);
+        }
+
+        // extra palm in back row
+        if (Math.random() < 0.35) {
+          const x2 = side * (14 + Math.random() * 4);
+          const h2 = 3 + Math.random() * 2;
+          const t2 = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.12, 0.2, h2, 6), trunkMat
+          );
+          t2.position.set(x2, h2 / 2, 2);
+          t2.rotation.z = side * 0.12;
+          slot.add(t2);
+          for (let f = 0; f < 5; f++) {
+            const angle = (f / 5) * Math.PI * 2;
+            const frond = new THREE.Mesh(
+              new THREE.BoxGeometry(0.3, 0.05, 1.2), leafMat
+            );
+            frond.position.set(
+              x2 + Math.cos(angle) * 0.5,
+              h2 - 0.3,
+              2 + Math.sin(angle) * 0.5
+            );
+            frond.rotation.y = angle;
+            frond.rotation.x = 0.5;
+            slot.add(frond);
+          }
+        }
+      }
+    }
+  }
+
+  _coastProps() {
+    /** Automation ROI (G): lower right-side embankment for clearer billboards */
+    const shortRightSlope = this.levelId === "G";
+    const cliffMat = new THREE.MeshStandardMaterial({
+      color: 0x8a7a60, roughness: 0.95, metalness: 0.05, flatShading: true,
+    });
+    const cliffDarkMat = new THREE.MeshStandardMaterial({
+      color: 0x6a5a45, roughness: 0.95, metalness: 0.05, flatShading: true,
+    });
+    const railMat = new THREE.MeshStandardMaterial({
+      color: 0xaaaaaa, roughness: 0.6, metalness: 0.5,
+    });
+    const shrubMat = new THREE.MeshStandardMaterial({
+      color: 0x5a8a4a, roughness: 0.85, metalness: 0.05,
+    });
+    const dirtMat = new THREE.MeshStandardMaterial({
+      color: 0x9a7a50, roughness: 0.92, metalness: 0.05,
+    });
+    const hillMat = new THREE.MeshStandardMaterial({
+      color: 0x6a9a4a, roughness: 0.88, metalness: 0.05, flatShading: true,
+    });
+
+    /** Automation ROI (G): shoreline + beach strip scroll with props (only coast level). */
+    const roiShore = this.levelId === "G";
+    const beachSandMat = roiShore
+      ? new THREE.MeshStandardMaterial({
+          color: 0xd8c896,
+          roughness: 0.9,
+          metalness: 0.02,
+        })
+      : null;
+    if (roiShore) {
+      this._roiOceanMat = new THREE.ShaderMaterial({
+        uniforms: { uTime: { value: 0 } },
+        vertexShader: ROI_OCEAN_VS,
+        fragmentShader: ROI_OCEAN_FS,
+        fog: false,
+      });
+    } else {
+      this._roiOceanMat = null;
+    }
+
+    const foamLineMat = roiShore
+      ? new THREE.MeshBasicMaterial({
+          color: 0xe8fbff,
+          transparent: true,
+          opacity: 0.88,
+          fog: false,
+        })
+      : null;
+
+    for (let i = 0; i < this._propCount; i++) {
+      const z = -200 + i * this._propSpacing;
+      const slot = new THREE.Group();
+      slot.position.z = z;
+      this.propsGroup.add(slot);
+      this._propSlots.push(slot);
+
+      // left: cliff / shoreline (G = beach + water beside the road)
+      const cliffH = 6 + Math.random() * 3;
+      const cliffW = roiShore ? 10 : 12;
+      /** ROI: backdrop rock left; sink mesh so its top isn’t a tan “second road” beside the lane */
+      const cliffCx = roiShore ? -35 : -13;
+      const cliff = new THREE.Mesh(
+        new THREE.BoxGeometry(cliffW, cliffH, this._propSpacing + 0.5),
+        Math.random() < 0.5 ? cliffMat : cliffDarkMat
+      );
+      const cliffY = roiShore ? -cliffH / 2 + 0.1 - 1.55 : -cliffH / 2 + 0.1;
+      cliff.position.set(cliffCx, cliffY, 0);
+      slot.add(cliff);
+
+      if (roiShore) {
+        // Ocean sheet: inner edge at beach; outer edge far past horizon (scrolls with curve)
+        const dz = this._propSpacing + 0.5;
+        const oceanW = ROI_OCEAN_INNER_X - ROI_OCEAN_OUTER_X;
+        const oceanCx = (ROI_OCEAN_INNER_X + ROI_OCEAN_OUTER_X) * 0.5;
+        const water = new THREE.Mesh(
+          new THREE.BoxGeometry(oceanW, 0.06, dz),
+          this._roiOceanMat
+        );
+        water.position.set(oceanCx, -0.045, 0);
+        slot.add(water);
+        const beach = new THREE.Mesh(
+          new THREE.BoxGeometry(5.5, 0.11, dz),
+          beachSandMat
+        );
+        beach.position.set(-9.85, 0.035, 0);
+        slot.add(beach);
+        const foam = new THREE.Mesh(
+          new THREE.BoxGeometry(0.55, 0.06, dz - 0.15),
+          foamLineMat
+        );
+        foam.position.set(-13.35, 0.014, 0);
+        slot.add(foam);
+      }
+
+      // rocky ledge along cliff top
+      if (Math.random() < 0.7) {
+        const ledge = new THREE.Mesh(
+          new THREE.DodecahedronGeometry(0.5 + Math.random() * 0.6, 0), cliffMat
+        );
+        ledge.position.set(
+          (roiShore ? -33 : -7.5) - Math.random() * 2,
+          0.15,
+          Math.random() * 6 - 3
+        );
+        ledge.scale.set(1.5, 0.4, 1);
+        slot.add(ledge);
+      }
+
+      // guardrail on cliff edge
+      const rail = new THREE.Mesh(
+        new THREE.BoxGeometry(0.08, 0.7, this._propSpacing), railMat
+      );
+      rail.position.set(-7.2, 0.35, 0);
+      slot.add(rail);
+      for (let p = 0; p < 4; p++) {
+        const post = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.05, 0.05, 0.8, 6), railMat
+        );
+        post.position.set(-7.2, 0.4, -5 + p * 3.5);
+        slot.add(post);
+      }
+
+      // right: hillside rising up with dirt, shrubs, and slope
+      const slopeH = shortRightSlope
+        ? 1.35 + Math.random() * 2.05
+        : 3 + Math.random() * 4;
+      const slope = new THREE.Mesh(
+        new THREE.BoxGeometry(14, slopeH, this._propSpacing + 0.5), hillMat
+      );
+      slope.position.set(16, slopeH / 2 - 0.5, 0);
+      slot.add(slope);
+
+      // dirt shoulder
+      const dirt = new THREE.Mesh(
+        new THREE.BoxGeometry(3, 0.15, this._propSpacing), dirtMat
+      );
+      dirt.position.set(8, 0.02, 0);
+      slot.add(dirt);
+
+      // shrubs on hillside
+      for (let s = 0; s < 2; s++) {
+        if (Math.random() < 0.6) {
+          const shrub = new THREE.Mesh(
+            new THREE.SphereGeometry(0.5 + Math.random() * 0.5, 6, 5), shrubMat
+          );
+          shrub.position.set(10 + Math.random() * 6, 0.4 + Math.random() * slopeH * 0.3, Math.random() * 6 - 3);
+          shrub.scale.y = 0.7;
+          slot.add(shrub);
+        }
+      }
+    }
+  }
+
+  _billboards() {
+    /** Bigger faces + closer to play (higher Z) = easier to read & click */
+    const BB_Z = -65;
+    const nBillboards = this.theme.billboards.length;
+    const defs = this.theme.billboards.map((b, i) => ({
+      ...b,
+      x:
+        nBillboards >= 4
+          ? [-24, -9, 9, 24][i] ?? 24
+          : i === 0
+            ? -20
+            : i === 1
+              ? 20
+              : 36,
+      z: BB_Z,
+    }));
+
+    /** 16:9 face matches interactive demo thumbnails; world scale is ~+15% for readability */
+    const boardW = 11.2;
+    const boardH = 6.3;
+    const poleH = 7;
+    const canvasW = 1280;
+    const canvasH = 720;
+
+    for (const def of defs) {
+      const g = new THREE.Group();
+      g.userData.billboardId = def.id;
+      g.userData.faceCenterY = poleH + boardH / 2;
+
+      const poleMat = new THREE.MeshStandardMaterial({
+        color: 0x4a5a78, metalness: 0.6, roughness: 0.4,
+      });
+      for (const side of [-1, 1]) {
+        const pole = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.12, 0.14, poleH, 8), poleMat
+        );
+        pole.position.set(side * (boardW / 2 - 0.4), poleH / 2, 0);
+        g.add(pole);
+      }
+
+      const frameMat = new THREE.MeshStandardMaterial({
+        color: 0x2a3550, metalness: 0.3, roughness: 0.5,
+      });
+      const frame = new THREE.Mesh(
+        new THREE.BoxGeometry(boardW + 0.3, boardH + 0.3, 0.15), frameMat
+      );
+      frame.position.y = poleH + boardH / 2;
+      g.add(frame);
+
+      const screenMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff, metalness: 0.05, roughness: 0.3,
+        emissive: 0xffffff, emissiveIntensity: 0.5,
+      });
+      const screen = new THREE.Mesh(
+        new THREE.BoxGeometry(boardW, boardH, 0.18), screenMat
+      );
+      screen.position.y = poleH + boardH / 2;
+      screen.position.z = 0.08;
+      g.add(screen);
+
+      const accentMat = new THREE.MeshStandardMaterial({
+        color: def.accent, emissive: def.accent, emissiveIntensity: 0.6,
+        metalness: 0.1, roughness: 0.4,
+      });
+      const stripTop = new THREE.Mesh(
+        new THREE.BoxGeometry(boardW + 0.1, 0.25, 0.2), accentMat
+      );
+      stripTop.position.set(0, poleH + boardH + 0.12, 0.1);
+      g.add(stripTop);
+      const stripBot = new THREE.Mesh(
+        new THREE.BoxGeometry(boardW + 0.1, 0.25, 0.2), accentMat
+      );
+      stripBot.position.set(0, poleH - 0.12, 0.1);
+      g.add(stripBot);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = canvasW;
+      canvas.height = canvasH;
+      const ctx = canvas.getContext("2d");
+
+      const accentHex = "#" + def.accent.toString(16).padStart(6, "0");
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      const labelMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true });
+      const label = new THREE.Mesh(
+        new THREE.PlaneGeometry(boardW * 0.99, boardH * 0.99), labelMat
+      );
+      label.position.y = poleH + boardH / 2;
+      label.position.z = 0.18;
+      g.add(label);
+
+      const drawFace = (logoImg) => {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvasW, canvasH);
+
+        if (logoImg) {
+          const pad = 6;
+          const maxW = canvasW - pad * 2;
+          const maxH = canvasH - pad * 2;
+          let w = logoImg.width, h = logoImg.height;
+          const mode = def.logoObjectFit === "cover" ? Math.max : Math.min;
+          const scale = mode(maxW / w, maxH / h);
+          w *= scale; h *= scale;
+          ctx.drawImage(logoImg, canvasW / 2 - w / 2, canvasH / 2 - h / 2, w, h);
+        } else {
+          ctx.textAlign = "center";
+          ctx.font = "bold 72px 'Courier New', monospace";
+          ctx.fillStyle = "#1a1a2e";
+          ctx.fillText(def.label.toUpperCase(), canvasW / 2, canvasH / 2 + 22);
+        }
+
+        tex.needsUpdate = true;
+      };
+
+      if (def.logo) {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => drawFace(img);
+        img.onerror = () => drawFace(null);
+        img.src = def.logo;
+      } else {
+        drawFace(null);
+      }
+
+      const spotL = new THREE.SpotLight(0xffffff, 7, 26, Math.PI / 4.8, 0.48, 1);
+      spotL.position.set(-boardW / 3, poleH + boardH + 2, 4);
+      spotL.target.position.set(0, poleH + boardH / 2, 0);
+      g.add(spotL); g.add(spotL.target);
+
+      const spotR = new THREE.SpotLight(0xffffff, 7, 26, Math.PI / 4.8, 0.48, 1);
+      spotR.position.set(boardW / 3, poleH + boardH + 2, 4);
+      spotR.target.position.set(0, poleH + boardH / 2, 0);
+      g.add(spotR); g.add(spotR.target);
+
+      const glow = new THREE.PointLight(def.accent, 2.4, 24);
+      glow.position.set(0, poleH + boardH / 2, 4.2);
+      g.add(glow);
+
+      g.position.set(def.x, 0, def.z);
+      /* Face the roadway a bit more so the canvas reads from the car */
+      if (def.x < 0) g.rotation.y = 0.25;
+      else g.rotation.y = -0.25;
+
+      this.billboards[def.id] = g;
+      this.group.add(g);
+    }
+  }
+
+  getBillboardMeshes() {
+    const meshes = [];
+    for (const id of Object.keys(this.billboards)) {
+      this.billboards[id].traverse((c) => {
+        if (c.isMesh) {
+          c.userData._billboardId = id;
+          meshes.push(c);
+        }
+      });
+    }
+    return meshes;
+  }
+
+  _skyline() {
+    this._skylineGroup = new THREE.Group();
+    this._skylineGroup.position.set(0, 0, -120);
+    this.group.add(this._skylineGroup);
+
+    const s = this.theme.scenery;
+    if (s === "city") this._citySkyline(this._skylineGroup);
+    else if (s === "durham") this._durhamSkyline(this._skylineGroup);
+    else if (s === "forest" && this.levelId === "B") {
+      this._mountainSkylineWorkflow(this._skylineGroup, 0x3a5a4a, 0x4a6a5a, 0x556b55, 0xeeffee);
+    } else if (s === "forest") {
+      this._mountainSkyline(this._skylineGroup, 0x3a5a4a, 0x4a6a5a, 0x556b55, 0xeeffee);
+    }
+    else if (s === "desert" && this.levelId === "C") this._mountainSkylineSonoran(this._skylineGroup);
+    else if (s === "desert") this._mountainSkyline(this._skylineGroup, 0xa08050, 0xb89060, 0xc49868, 0xffe8c0);
+    else if (s === "swamp") this._swampSkyline(this._skylineGroup);
+    else if (s === "snow") this._snowMountainSkyline(this._skylineGroup);
+    else if (s === "water") this._waterSkyline(this._skylineGroup);
+    else if (s === "coast") this._coastSkyline(this._skylineGroup);
+    else if (s === "trench") this._trenchSkyline(this._skylineGroup);
+
+    this._castleMode = false;
+    this._savedSkyChildren = null;
+  }
+
+  setCastle(on) {
+    if (!this._skylineGroup) return;
+    if (on && !this._castleMode) {
+      this._castleMode = true;
+      this._savedSkyChildren = [...this._skylineGroup.children];
+      while (this._skylineGroup.children.length) {
+        this._skylineGroup.remove(this._skylineGroup.children[0]);
+      }
+      this._castleSkyline(this._skylineGroup);
+    } else if (!on && this._castleMode) {
+      this._castleMode = false;
+      while (this._skylineGroup.children.length) {
+        const c = this._skylineGroup.children[0];
+        this._skylineGroup.remove(c);
+        c.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) { if (o.material.dispose) o.material.dispose(); } });
+      }
+      if (this._savedSkyChildren) {
+        for (const c of this._savedSkyChildren) this._skylineGroup.add(c);
+        this._savedSkyChildren = null;
+      }
+    }
+  }
+
+  _castleSkyline(g) {
+    const stone = new THREE.MeshStandardMaterial({
+      color: 0x6a6a6a, roughness: 0.9, metalness: 0.1,
+      emissive: 0x1a1a1a, emissiveIntensity: 0.3,
+    });
+    const darkStone = new THREE.MeshStandardMaterial({
+      color: 0x4a4a4a, roughness: 0.95, metalness: 0.1,
+      emissive: 0x111111, emissiveIntensity: 0.2,
+    });
+    const roofMat = new THREE.MeshStandardMaterial({
+      color: 0x4a2a5a, roughness: 0.6, metalness: 0.2,
+      emissive: 0x2a1535, emissiveIntensity: 0.4,
+    });
+    const windowMat = new THREE.MeshBasicMaterial({
+      color: 0xffcc44, transparent: true, opacity: 0.8,
+    });
+    const flagMat = new THREE.MeshBasicMaterial({ color: 0xcc2222 });
+
+    // Main castle wall
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(60, 18, 3), stone);
+    wall.position.set(0, 9, 0);
+    g.add(wall);
+
+    // Battlements (crenellations along the top)
+    for (let i = -28; i <= 28; i += 3) {
+      const merlon = new THREE.Mesh(new THREE.BoxGeometry(1.8, 3, 3.2), darkStone);
+      merlon.position.set(i, 19.5, 0);
+      g.add(merlon);
+    }
+
+    // Central keep (large tower)
+    const keep = new THREE.Mesh(new THREE.BoxGeometry(12, 35, 8), stone);
+    keep.position.set(0, 17.5, -3);
+    g.add(keep);
+    const keepRoof = new THREE.Mesh(new THREE.ConeGeometry(8, 10, 4), roofMat);
+    keepRoof.position.set(0, 40, -3);
+    keepRoof.rotation.y = Math.PI / 4;
+    g.add(keepRoof);
+
+    // Keep windows
+    for (let row = 0; row < 3; row++) {
+      for (const side of [-3, 0, 3]) {
+        const win = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2, 0.5), windowMat);
+        win.position.set(side, 15 + row * 8, 1.5);
+        g.add(win);
+      }
+    }
+
+    // Corner towers
+    for (const x of [-25, -12, 12, 25]) {
+      const tower = new THREE.Mesh(new THREE.CylinderGeometry(3, 3.5, 28, 8), stone);
+      tower.position.set(x, 14, 0);
+      g.add(tower);
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(4, 8, 8), roofMat);
+      roof.position.set(x, 32, 0);
+      g.add(roof);
+      // Tower windows
+      for (let row = 0; row < 2; row++) {
+        const win = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.5, 0.3), windowMat);
+        win.position.set(x, 12 + row * 9, 3);
+        g.add(win);
+      }
+      // Flag
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 4, 4), darkStone);
+      pole.position.set(x, 38, 0);
+      g.add(pole);
+      const flag = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.5, 0.05), flagMat);
+      flag.position.set(x + 1.3, 39, 0);
+      g.add(flag);
+    }
+
+    // Gate / portcullis
+    const gate = new THREE.Mesh(new THREE.BoxGeometry(5, 8, 1), darkStone);
+    gate.position.set(0, 4, 2);
+    g.add(gate);
+    const gateArch = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 1, 8, 1, false, 0, Math.PI), darkStone);
+    gateArch.rotation.z = Math.PI;
+    gateArch.rotation.y = Math.PI / 2;
+    gateArch.position.set(0, 8, 2);
+    g.add(gateArch);
+
+    // Torches flanking the gate
+    const torchLight = new THREE.MeshBasicMaterial({ color: 0xff8800 });
+    for (const side of [-3.5, 3.5]) {
+      const bracket = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 2, 4), darkStone);
+      bracket.position.set(side, 7, 2.5);
+      g.add(bracket);
+      const flame = new THREE.Mesh(new THREE.SphereGeometry(0.4, 6, 6), torchLight);
+      flame.position.set(side, 8.2, 2.5);
+      g.add(flame);
+    }
+  }
+
+  _citySkyline(skylineGroup) {
+    const bldgMat = (color, emissive = 0x000000) =>
+      new THREE.MeshStandardMaterial({
+        color, emissive, emissiveIntensity: 0.7,
+        metalness: 0.1, roughness: 0.85, flatShading: true,
+      });
+
+    const buildings = [
+      { x: -50, w: 10, h: 15, d: 8, color: 0x2a3048 },
+      { x: -38, w: 8, h: 20, d: 7, color: 0x343a55 },
+      { x: -26, w: 12, h: 12, d: 9, color: 0x282e44 },
+      { x: -15, w: 7, h: 18, d: 6, color: 0x303650 },
+      { x: -5, w: 9, h: 14, d: 7, color: 0x2c3248 },
+      { x: 5, w: 8, h: 10, d: 6, color: 0x262c40 },
+      { x: 38, w: 11, h: 11, d: 8, color: 0x282e44 },
+      { x: 48, w: 7, h: 19, d: 6, color: 0x343a55 },
+      { x: 58, w: 10, h: 14, d: 8, color: 0x2a3048 },
+    ];
+
+    for (const b of buildings) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(b.w, b.h, b.d), bldgMat(b.color, 0x141830)
+      );
+      mesh.position.set(b.x, b.h / 2, 0);
+      skylineGroup.add(mesh);
+
+      const winMat = new THREE.MeshBasicMaterial({
+        color: 0x5588bb, transparent: true, opacity: 0.8,
+      });
+      const rows = Math.floor(b.h / 2.5);
+      const cols = Math.floor(b.w / 2.2);
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (Math.random() < 0.35) continue;
+          const win = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.6), winMat);
+          win.position.set(
+            b.x - (b.w / 2) + 1.2 + c * 2.2,
+            1.5 + r * 2.5,
+            b.d / 2 + 0.05
+          );
+          skylineGroup.add(win);
+        }
+      }
+    }
+
+    // Red Hat HQ
+    const rhqW = 14, rhqH = 26, rhqD = 10, rhqX = 22;
+    const towerMat = bldgMat(0x7a8a9a, 0x1a2535);
+    const tower = new THREE.Mesh(new THREE.BoxGeometry(rhqW, rhqH, rhqD), towerMat);
+    tower.position.set(rhqX, rhqH / 2, 0);
+    skylineGroup.add(tower);
+
+    const rhWinMat = new THREE.MeshBasicMaterial({
+      color: 0x88aacc, transparent: true, opacity: 0.75,
+    });
+    const rhRows = Math.floor(rhqH / 2.2);
+    const rhCols = Math.floor(rhqW / 1.8);
+    for (let r = 0; r < rhRows; r++) {
+      for (let c = 0; c < rhCols; c++) {
+        if (Math.random() < 0.2) continue;
+        const win = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.7), rhWinMat);
+        win.position.set(
+          rhqX - (rhqW / 2) + 1 + c * 1.8,
+          1.8 + r * 2.2,
+          rhqD / 2 + 0.06
+        );
+        skylineGroup.add(win);
+      }
+    }
+
+    const signW = rhqW * 0.85, signH = 3.5;
+    const signMat = new THREE.MeshStandardMaterial({
+      color: 0xcc0000, emissive: 0xcc0000, emissiveIntensity: 0.8,
+      metalness: 0.05, roughness: 0.5,
+    });
+    const sign = new THREE.Mesh(new THREE.BoxGeometry(signW, signH, 0.3), signMat);
+    sign.position.set(rhqX, rhqH - 1.2, rhqD / 2 + 0.2);
+    skylineGroup.add(sign);
+
+    const textMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const pixelSize = 0.38;
+    const letters = {
+      R: [[0,0],[1,0],[2,0],[0,1],[2,1],[0,2],[1,2],[2,2],[0,3],[2,3],[0,4]],
+      E: [[0,0],[1,0],[2,0],[0,1],[0,2],[1,2],[0,3],[0,4],[1,4],[2,4]],
+      D: [[0,0],[1,0],[0,1],[2,1],[0,2],[2,2],[0,3],[2,3],[0,4],[1,4]],
+      H: [[0,0],[2,0],[0,1],[2,1],[0,2],[1,2],[2,2],[0,3],[2,3],[0,4],[2,4]],
+      A: [[1,0],[0,1],[2,1],[0,2],[1,2],[2,2],[0,3],[2,3],[0,4],[2,4]],
+      T: [[0,0],[1,0],[2,0],[1,1],[1,2],[1,3],[1,4]],
+    };
+    const word = "REDHAT";
+    const totalW = word.length * 3.5 * pixelSize;
+    let cursorX = rhqX - totalW / 2;
+    for (const ch of word) {
+      if (ch === " ") { cursorX += 1.5 * pixelSize; continue; }
+      const dots = letters[ch];
+      if (!dots) { cursorX += 3.5 * pixelSize; continue; }
+      for (const [dx, dy] of dots) {
+        const px = new THREE.Mesh(
+          new THREE.BoxGeometry(pixelSize * 0.85, pixelSize * 0.85, 0.15), textMat
+        );
+        px.position.set(cursorX + dx * pixelSize, rhqH - 0.2 - dy * pixelSize, rhqD / 2 + 0.4);
+        skylineGroup.add(px);
+      }
+      cursorX += 3.5 * pixelSize;
+    }
+
+    const hatMat = new THREE.MeshStandardMaterial({
+      color: 0xcc0000, emissive: 0xaa0000, emissiveIntensity: 0.6,
+      metalness: 0.05, roughness: 0.5, flatShading: true,
+    });
+    const brim = new THREE.Mesh(new THREE.BoxGeometry(6, 0.6, 2), hatMat);
+    brim.position.set(rhqX, rhqH + 1.8, rhqD / 2 - 0.5);
+    skylineGroup.add(brim);
+    const crown = new THREE.Mesh(new THREE.BoxGeometry(3.5, 2.2, 1.8), hatMat);
+    crown.position.set(rhqX - 0.3, rhqH + 3.2, rhqD / 2 - 0.5);
+    skylineGroup.add(crown);
+    const dent = new THREE.Mesh(
+      new THREE.BoxGeometry(2.4, 0.5, 1.6),
+      bldgMat(0x990000, 0x660000)
+    );
+    dent.position.set(rhqX - 0.3, rhqH + 4.3, rhqD / 2 - 0.5);
+    skylineGroup.add(dent);
+    const tip = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.0, 1.4), hatMat);
+    tip.position.set(rhqX + 1.8, rhqH + 3.0, rhqD / 2 - 0.5);
+    skylineGroup.add(tip);
+  }
+
+  _mountainSkyline(skylineGroup, baseColor, midColor, peakColor, snowColor) {
+    const baseMat = new THREE.MeshStandardMaterial({
+      color: baseColor, roughness: 0.9, metalness: 0.05, flatShading: true,
+    });
+    const midMat = new THREE.MeshStandardMaterial({
+      color: midColor, roughness: 0.9, metalness: 0.05, flatShading: true,
+    });
+    const peakMat = new THREE.MeshStandardMaterial({
+      color: peakColor, roughness: 0.85, metalness: 0.05, flatShading: true,
+    });
+    const snowMat = new THREE.MeshStandardMaterial({
+      color: snowColor, roughness: 0.7, metalness: 0.1, flatShading: true,
+    });
+
+    const mountains = [
+      { x: -55, h: 30, r: 16 },
+      { x: -35, h: 42, r: 20 },
+      { x: -18, h: 25, r: 14 },
+      { x: -2,  h: 38, r: 18 },
+      { x: 18,  h: 45, r: 22 },
+      { x: 38,  h: 32, r: 16 },
+      { x: 55,  h: 28, r: 15 },
+      { x: 70,  h: 36, r: 19 },
+    ];
+
+    for (const m of mountains) {
+      const cone = new THREE.Mesh(
+        new THREE.ConeGeometry(m.r, m.h, 6), baseMat
+      );
+      cone.position.set(m.x, m.h / 2, 0);
+      skylineGroup.add(cone);
+
+      // Mid section
+      const mid = new THREE.Mesh(
+        new THREE.ConeGeometry(m.r * 0.6, m.h * 0.55, 5), midMat
+      );
+      mid.position.set(m.x, m.h * 0.45, 0);
+      skylineGroup.add(mid);
+
+      // Snow cap on taller peaks
+      if (m.h > 30) {
+        const snow = new THREE.Mesh(
+          new THREE.ConeGeometry(m.r * 0.25, m.h * 0.18, 5), snowMat
+        );
+        snow.position.set(m.x, m.h * 0.82, 0);
+        skylineGroup.add(snow);
+      }
+    }
+  }
+
+  /** Workflow orchestration (B): smoother silhouettes + layered mass vs raw 6-gon cones */
+  _mountainSkylineWorkflow(skylineGroup, baseColor, midColor, peakColor, snowColor) {
+    const baseMat = new THREE.MeshStandardMaterial({
+      color: baseColor, roughness: 0.88, metalness: 0.06, flatShading: false,
+    });
+    const midMat = new THREE.MeshStandardMaterial({
+      color: midColor, roughness: 0.86, metalness: 0.05, flatShading: false,
+    });
+    const peakMat = new THREE.MeshStandardMaterial({
+      color: peakColor, roughness: 0.84, metalness: 0.06, flatShading: false,
+    });
+    const snowMat = new THREE.MeshStandardMaterial({
+      color: snowColor, roughness: 0.72, metalness: 0.06, flatShading: false,
+    });
+    const rockyMat = new THREE.MeshStandardMaterial({
+      color: midColor, roughness: 0.92, metalness: 0.03, flatShading: true,
+    });
+
+    const peaks = [
+      { x: -62, h: 26, w: 24, z: -6, mx: -1.5, mz: 1.2, cx: 1.8, cz: -0.6, cr: 3.4, cry: 0.35 },
+      { x: -38, h: 38, w: 30, z: 2, mx: 2.2, mz: -1.8, cx: -1.2, cz: 0.9, cr: 4.1, cry: 0.55 },
+      { x: -18, h: 22, w: 18, z: -10, mx: -1, mz: 0.8, cx: 0.6, cz: -1.4, cr: 2.6, cry: 0.2 },
+      { x: 2, h: 34, w: 26, z: 4, mx: 1.4, mz: 2, cx: -1.9, cz: -0.5, cr: 3.8, cry: 0.45 },
+      { x: 22, h: 41, w: 32, z: -4, mx: -2.4, mz: -1.2, cx: 2.1, cz: 1.1, cr: 4.4, cry: 0.5 },
+      { x: 46, h: 28, w: 22, z: 6, mx: 1.6, mz: -2, cx: -0.8, cz: 0.4, cr: 3.1, cry: 0.3 },
+      { x: 68, h: 34, w: 28, z: -8, mx: -1.8, mz: 1.5, cx: 1.5, cz: -1.1, cr: 3.9, cry: 0.4 },
+    ];
+
+    for (const p of peaks) {
+      const base = new THREE.Mesh(
+        new THREE.SphereGeometry(p.w / 2, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+        baseMat
+      );
+      base.scale.set(1.05, p.h / (p.w / 2), 0.92);
+      base.position.set(p.x, 0, p.z);
+      skylineGroup.add(base);
+
+      const mid = new THREE.Mesh(
+        new THREE.SphereGeometry(p.w * 0.38, 9, 7, 0, Math.PI * 2, 0, Math.PI / 2),
+        midMat
+      );
+      mid.scale.set(1.1, (p.h * 0.68) / (p.w * 0.38), 1.05);
+      mid.position.set(p.x + p.mx, 0, p.z + p.mz);
+      skylineGroup.add(mid);
+
+      const crest = new THREE.Mesh(
+        new THREE.ConeGeometry(p.w * 0.22, p.h * 0.22, 10),
+        peakMat
+      );
+      crest.position.set(p.x + p.cx, p.h * 0.62, p.z + p.cz);
+      skylineGroup.add(crest);
+
+      if (p.h > 26) {
+        const cap = new THREE.Mesh(
+          new THREE.SphereGeometry(p.w * 0.26, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+          snowMat
+        );
+        cap.scale.set(1.2, (p.h * 0.28) / (p.w * 0.26), 1.15);
+        cap.position.set(p.x + 1.2, p.h * 0.52, p.z);
+        skylineGroup.add(cap);
+      }
+
+      const crag = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(p.cr, 1),
+        rockyMat
+      );
+      crag.scale.set(1.4, 0.55, 1.1);
+      crag.position.set(p.x - p.w * 0.15, p.h * p.cry + 2, p.z + 4);
+      crag.rotation.set(0.2, (p.x % 17) / 22, 0.1);
+      skylineGroup.add(crag);
+    }
+
+    const rollRadii = [6, 7.5, 5.8, 8, 6.8];
+    for (let k = 0; k < 5; k++) {
+      const roll = new THREE.Mesh(
+        new THREE.SphereGeometry(rollRadii[k], 8, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+        baseMat
+      );
+      roll.scale.set(1.2, 0.35, 0.9);
+      roll.position.set(-70 + k * 32, 1.5, -18 - k * 3);
+      skylineGroup.add(roll);
+    }
+  }
+
+  /** Developer experience (C): jagged ridges on the flanks, low saddle down the center (open pass), no Mario domes */
+  _mountainSkylineSonoran(skylineGroup) {
+    const shadow = new THREE.MeshStandardMaterial({
+      color: 0x484060, roughness: 0.94, metalness: 0.03, flatShading: true,
+      emissive: 0x1a1428, emissiveIntensity: 0.06,
+    });
+    const rock = new THREE.MeshStandardMaterial({
+      color: 0x904838, roughness: 0.9, metalness: 0.05, flatShading: true,
+      emissive: 0x381810, emissiveIntensity: 0.05,
+    });
+    const sunlit = new THREE.MeshStandardMaterial({
+      color: 0xc46850, roughness: 0.85, metalness: 0.06, flatShading: true,
+      emissive: 0x682820, emissiveIntensity: 0.09,
+    });
+    const rim = new THREE.MeshStandardMaterial({
+      color: 0xe09070, roughness: 0.75, metalness: 0.07, flatShading: true,
+      emissive: 0xa85838, emissiveIntensity: 0.15,
+    });
+    const fin = new THREE.MeshStandardMaterial({
+      color: 0x5a4868, roughness: 0.93, metalness: 0.03, flatShading: true,
+      emissive: 0x201830, emissiveIntensity: 0.05,
+    });
+
+    const seg = 7;
+    const addCone = (mat, x, yBase, z, r, h, ry, rz = 0) => {
+      const m = new THREE.Mesh(new THREE.ConeGeometry(r, h, seg), mat);
+      m.position.set(x, yBase + h * 0.5, z);
+      m.rotation.y = ry;
+      m.rotation.z = rz;
+      skylineGroup.add(m);
+    };
+    /** Wide low mesa buttress — horizontal bulk reads as desert ridge, not a tapering tree */
+    const addMesaSlab = (mat, cx, y0, cz, rx, rz, hy, ry) => {
+      const m = new THREE.Mesh(
+        new THREE.CylinderGeometry(rx, rx * 1.06, hy, seg, 1),
+        mat
+      );
+      m.position.set(cx, y0 + hy * 0.5, cz);
+      m.rotation.y = ry;
+      m.scale.set(1, 1, rz / rx);
+      skylineGroup.add(m);
+    };
+
+    /**
+     * Flank silhouettes stay wide/low (mesa), not stacks of narrowing cones (= evergreens in the corners).
+     * Inner massifs stay a bit peakier — away from the extreme left/right frame.
+     */
+    const flankMassifs = [
+      {
+        x: -90, z: -2, ry: 0.32, slabs: [
+          { rx: 26, rz: 10, hy: 9, y0: 0, m: shadow },
+          { rx: 21, rz: 9, hy: 8, y0: 9, m: rock },
+          { rx: 15, rz: 8, hy: 6, y0: 17, m: sunlit },
+        ],
+        wings: [{ dx: -18, dz: -4 }, { dx: 12, dz: -2 }],
+      },
+      {
+        x: 94, z: 6, ry: -0.34, slabs: [
+          { rx: 24, rz: 9, hy: 8, y0: 0, m: shadow },
+          { rx: 18, rz: 8, hy: 7, y0: 8, m: rock },
+          { rx: 13, rz: 7, hy: 6, y0: 15, m: sunlit },
+        ],
+        wings: [{ dx: 14, dz: -3 }, { dx: -14, dz: -2 }],
+      },
+    ];
+    for (const fm of flankMassifs) {
+      for (const S of fm.slabs) {
+        addMesaSlab(S.m, fm.x, S.y0, fm.z, S.rx, S.rz, S.hy, fm.ry);
+      }
+      for (const w of fm.wings) {
+        const wy = 5 + Math.abs(w.dx) * 0.04;
+        addMesaSlab(
+          rock,
+          fm.x + w.dx,
+          0,
+          fm.z + w.dz,
+          13,
+          10,
+          wy,
+          fm.ry + (w.dx < 0 ? -0.12 : 0.1)
+        );
+      }
+    }
+
+    /** Inner ridges: layered mesa slabs so they read as rocky buttes */
+    const massifs = [
+      {
+        x: -54, z: 10, ry: -0.28, slabs: [
+          { rx: 22, rz: 12, hy: 12, y0: 0, m: shadow },
+          { rx: 17, rz: 10, hy: 10, y0: 12, m: rock },
+          { rx: 12, rz: 8, hy: 7, y0: 22, m: sunlit },
+          { rx: 8, rz: 6, hy: 4, y0: 29, m: rim },
+        ],
+      },
+      {
+        x: 62, z: -2, ry: 0.22, slabs: [
+          { rx: 24, rz: 13, hy: 13, y0: 0, m: rock },
+          { rx: 18, rz: 11, hy: 10, y0: 13, m: sunlit },
+          { rx: 13, rz: 9, hy: 7, y0: 23, m: rim },
+          { rx: 9, rz: 7, hy: 4, y0: 30, m: rim },
+        ],
+      },
+    ];
+    for (const mass of massifs) {
+      for (const S of mass.slabs) {
+        addMesaSlab(S.m, mass.x, S.y0, mass.z, S.rx, S.rz, S.hy, mass.ry);
+      }
+    }
+
+    /** No pencil spires near frame edges — only mid-distance peaks, stocky silhouette */
+    const spires = [
+      { x: -42, z: -16, r: 13, h: 16, ry: -0.3 },
+      { x: 50, z: -14, r: 14, h: 18, ry: 0.26 },
+    ];
+    for (const s of spires) {
+      addCone(sunlit, s.x, 0, s.z, s.r, s.h, s.ry);
+      addCone(shadow, s.x + 1.4, s.h * 0.28, s.z - 1.8, s.r * 0.6, s.h * 0.3, s.ry + 0.15, 0.08);
+    }
+
+
+    /** Slabs at frame edges: short + broad so they read as rock strata, not tall trunks */
+    const fins = [
+      { x: -98, y: 7, z: -28, sx: 4.2, sy: 11, sz: 9, ry: 0.32 },
+      { x: -66, y: 10, z: -22, sx: 3.8, sy: 14, sz: 8, ry: -0.18 },
+      { x: 40, y: 12, z: -20, sx: 3.6, sy: 15, sz: 9, ry: 0.24 },
+      { x: 82, y: 8, z: -24, sx: 4, sy: 12, sz: 8, ry: -0.28 },
+    ];
+    for (const f of fins) {
+      const b = new THREE.Mesh(
+        new THREE.BoxGeometry(f.sx, f.sy, f.sz), fin
+      );
+      b.position.set(f.x, f.y, f.z);
+      b.rotation.set(0.08, f.ry, -0.06);
+      skylineGroup.add(b);
+    }
+    const wedges = [
+      { x: -100, y: 7, z: -34, sx: 10, sy: 10, sz: 12, ry: 0.2 },
+      { x: -78, y: 5, z: -40, sx: 8, sy: 8, sz: 9, ry: -0.15 },
+    ];
+    for (const q of wedges) {
+      const w = new THREE.Mesh(
+        new THREE.BoxGeometry(q.sx, q.sy, q.sz), shadow
+      );
+      w.rotation.set(0.1, q.ry, -0.08);
+      w.position.set(q.x, q.y, q.z);
+      skylineGroup.add(w);
+    }
+
+    /** Edge crags: squat so they don’t read as round tree crowns */
+    const crags = [
+      { x: -104, z: 2, sc: 5.5 },
+      { x: 110, z: -4, sc: 4.8 },
+    ];
+    for (const c of crags) {
+      const d = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(c.sc, 0),
+        rock
+      );
+      d.position.set(c.x, c.sc * 0.35, c.z);
+      d.rotation.set(0.22, c.x * 0.01, -0.15);
+      d.scale.set(1.6, 0.45, 1.5);
+      skylineGroup.add(d);
+    }
+  }
+
+  _snowMountainSkyline(skylineGroup) {
+    const rockMat = new THREE.MeshStandardMaterial({
+      color: 0x6a7a8a, roughness: 0.9, metalness: 0.05, flatShading: true,
+    });
+    const midMat = new THREE.MeshStandardMaterial({
+      color: 0x8090a0, roughness: 0.85, metalness: 0.05, flatShading: true,
+    });
+    const snowMat = new THREE.MeshStandardMaterial({
+      color: 0xeef4ff, roughness: 0.6, metalness: 0.1, flatShading: true,
+    });
+    const snowBrightMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff, roughness: 0.5, metalness: 0.15,
+      emissive: 0x667788, emissiveIntensity: 0.15,
+    });
+
+    const peaks = [
+      { x: -60, h: 28, w: 22 },
+      { x: -35, h: 40, w: 28 },
+      { x: -12, h: 32, w: 24 },
+      { x: 10,  h: 45, w: 30 },
+      { x: 35,  h: 36, w: 26 },
+      { x: 58,  h: 30, w: 22 },
+      { x: 78,  h: 38, w: 28 },
+    ];
+
+    for (const p of peaks) {
+      // Wide base using a squashed sphere for a rounded mountain shape
+      const base = new THREE.Mesh(
+        new THREE.SphereGeometry(p.w / 2, 7, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+        rockMat
+      );
+      base.scale.set(1, p.h / (p.w / 2), 1);
+      base.position.set(p.x, 0, 0);
+      skylineGroup.add(base);
+
+      // Mid-section ridge
+      const mid = new THREE.Mesh(
+        new THREE.SphereGeometry(p.w * 0.35, 6, 5, 0, Math.PI * 2, 0, Math.PI / 2),
+        midMat
+      );
+      mid.scale.set(1, (p.h * 0.7) / (p.w * 0.35), 1);
+      mid.position.set(p.x, 0, 0);
+      skylineGroup.add(mid);
+
+      // Snow cap covering upper portion
+      const capR = p.w * 0.3;
+      const capH = p.h * 0.35;
+      const cap = new THREE.Mesh(
+        new THREE.SphereGeometry(capR, 6, 5, 0, Math.PI * 2, 0, Math.PI / 2),
+        p.h > 35 ? snowBrightMat : snowMat
+      );
+      cap.scale.set(1.2, capH / capR, 1.2);
+      cap.position.set(p.x, p.h * 0.55, 0);
+      skylineGroup.add(cap);
+
+      // Extra bright peak on tallest mountains
+      if (p.h > 35) {
+        const tip = new THREE.Mesh(
+          new THREE.SphereGeometry(capR * 0.4, 5, 4, 0, Math.PI * 2, 0, Math.PI / 2),
+          snowBrightMat
+        );
+        tip.scale.set(1, capH * 0.6 / (capR * 0.4), 1);
+        tip.position.set(p.x, p.h * 0.75, 0);
+        skylineGroup.add(tip);
+      }
+    }
+
+    // Cloud wisps around peaks
+    const cloudMat = new THREE.MeshStandardMaterial({
+      color: 0xdde8f0, transparent: true, opacity: 0.35,
+      roughness: 0.95, metalness: 0.0,
+    });
+    for (let c = 0; c < 5; c++) {
+      const cloud = new THREE.Mesh(
+        new THREE.SphereGeometry(4 + Math.random() * 4, 6, 5), cloudMat
+      );
+      cloud.position.set(-45 + c * 25, 20 + Math.random() * 12, 2);
+      cloud.scale.set(2.5, 0.4, 1);
+      skylineGroup.add(cloud);
+    }
+  }
+
+  _swampSkyline(skylineGroup) {
+    const treeMat = new THREE.MeshStandardMaterial({
+      color: 0x1a2a18, roughness: 0.9, metalness: 0.05, flatShading: true,
+    });
+    const mistMat = new THREE.MeshStandardMaterial({
+      color: 0x4a5a3a, transparent: true, opacity: 0.35,
+      roughness: 0.95, metalness: 0.0,
+    });
+    // dead tree silhouettes
+    const positions = [-55, -38, -22, -8, 8, 25, 40, 55, 68];
+    for (const x of positions) {
+      const h = 12 + Math.random() * 18;
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.4, 0.8, h, 5), treeMat
+      );
+      trunk.position.set(x, h / 2, 0);
+      trunk.rotation.z = (Math.random() - 0.5) * 0.15;
+      skylineGroup.add(trunk);
+
+      // bare branches
+      for (let b = 0; b < 3; b++) {
+        const bLen = 3 + Math.random() * 4;
+        const branch = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.1, 0.2, bLen, 4), treeMat
+        );
+        branch.position.set(x + (Math.random() - 0.5) * 2, h * (0.5 + b * 0.15), 0);
+        branch.rotation.z = (Math.random() - 0.5) * 1.2;
+        skylineGroup.add(branch);
+      }
+    }
+    // mist layer
+    const mist = new THREE.Mesh(
+      new THREE.PlaneGeometry(200, 15), mistMat
+    );
+    mist.position.set(0, 6, 5);
+    skylineGroup.add(mist);
+  }
+
+  _waterSkyline(skylineGroup) {
+    const waveMat = new THREE.MeshStandardMaterial({
+      color: 0x2266aa, roughness: 0.5, metalness: 0.2, flatShading: true,
+      transparent: true, opacity: 0.7,
+    });
+    const cloudMat = new THREE.MeshStandardMaterial({
+      color: 0xccddee, roughness: 0.9, metalness: 0.0, flatShading: true,
+      transparent: true, opacity: 0.6,
+    });
+    // rolling ocean waves
+    for (let w = 0; w < 6; w++) {
+      const waveW = 60 + Math.random() * 40;
+      const waveH = 3 + Math.random() * 4;
+      const wave = new THREE.Mesh(
+        new THREE.CylinderGeometry(waveW / 2, waveW / 2, waveH, 8, 1, false, 0, Math.PI),
+        waveMat
+      );
+      wave.rotation.z = Math.PI / 2;
+      wave.rotation.y = Math.PI / 2;
+      wave.position.set(-40 + w * 25, waveH * 0.3, -w * 5);
+      wave.scale.set(1, 0.3, 1);
+      skylineGroup.add(wave);
+    }
+    // clouds
+    for (let c = 0; c < 5; c++) {
+      const cloud = new THREE.Mesh(
+        new THREE.SphereGeometry(6 + Math.random() * 5, 6, 5), cloudMat
+      );
+      cloud.position.set(-50 + c * 28, 25 + Math.random() * 10, -5);
+      cloud.scale.set(2, 0.6, 1);
+      skylineGroup.add(cloud);
+    }
+  }
+
+  _coastSkyline(skylineGroup) {
+    // Ocean far below the cliff on the left — flat plane at negative Y
+    const oceanMat = new THREE.MeshStandardMaterial({
+      color: 0x1477aa, roughness: 0.3, metalness: 0.3, flatShading: true,
+    });
+    const ocean = new THREE.Mesh(
+      new THREE.PlaneGeometry(200, 200), oceanMat
+    );
+    ocean.rotation.x = -Math.PI / 2;
+    ocean.position.set(-70, -8, -60);
+    skylineGroup.add(ocean);
+
+    // Deeper ocean layer for depth
+    const deepMat = new THREE.MeshStandardMaterial({
+      color: 0x0a5588, roughness: 0.4, metalness: 0.25,
+    });
+    const deep = new THREE.Mesh(
+      new THREE.PlaneGeometry(200, 80), deepMat
+    );
+    deep.position.set(-70, -2, -140);
+    skylineGroup.add(deep);
+
+    // Foam/surf at base of cliff
+    const foamMat = new THREE.MeshStandardMaterial({
+      color: 0xcceeFF, roughness: 0.7, metalness: 0.0,
+      transparent: true, opacity: 0.6,
+    });
+    for (let f = 0; f < 6; f++) {
+      const foam = new THREE.Mesh(
+        new THREE.BoxGeometry(8 + Math.random() * 12, 0.2, 1.5), foamMat
+      );
+      foam.position.set(-22 - Math.random() * 30, -7.5, -20 + f * -14);
+      foam.rotation.y = (Math.random() - 0.5) * 0.15;
+      skylineGroup.add(foam);
+    }
+
+    // Distant cliff face on far left (visible rocky wall)
+    const farCliffMat = new THREE.MeshStandardMaterial({
+      color: 0x7a6a50, roughness: 0.95, metalness: 0.05, flatShading: true,
+    });
+    const farCliff = new THREE.Mesh(
+      new THREE.BoxGeometry(30, 25, 80), farCliffMat
+    );
+    farCliff.position.set(-55, 2, -50);
+    skylineGroup.add(farCliff);
+
+    // Green vegetation on top of far cliff
+    const vegMat = new THREE.MeshStandardMaterial({
+      color: 0x5a8a3a, roughness: 0.85, metalness: 0.05, flatShading: true,
+    });
+    const veg = new THREE.Mesh(
+      new THREE.BoxGeometry(32, 3, 82), vegMat
+    );
+    veg.position.set(-55, 15, -50);
+    skylineGroup.add(veg);
+
+    // Right: green coastal mountains rising behind the hill
+    const hillMat = new THREE.MeshStandardMaterial({
+      color: 0x4a7a3a, roughness: 0.9, metalness: 0.05, flatShading: true,
+    });
+    const hillPositions =
+      this.levelId === "G"
+        ? [
+            { x: 30, h: 11, r: 12 },
+            { x: 50, h: 14, r: 14 },
+            { x: 70, h: 12, r: 12 },
+            { x: 88, h: 10, r: 10 },
+          ]
+        : [
+            { x: 30, h: 30, r: 18 },
+            { x: 50, h: 40, r: 24 },
+            { x: 70, h: 32, r: 20 },
+            { x: 88, h: 25, r: 16 },
+          ];
+    for (const hp of hillPositions) {
+      const hill = new THREE.Mesh(
+        new THREE.ConeGeometry(hp.r, hp.h, 6), hillMat
+      );
+      hill.position.set(hp.x, hp.h / 2, 0);
+      skylineGroup.add(hill);
+    }
+
+    // Clouds
+    const cloudMat = new THREE.MeshStandardMaterial({
+      color: 0xeef5ff, roughness: 0.9, metalness: 0.0, flatShading: true,
+      transparent: true, opacity: 0.5,
+    });
+    for (let c = 0; c < 5; c++) {
+      const cloud = new THREE.Mesh(
+        new THREE.SphereGeometry(5 + Math.random() * 5, 6, 5), cloudMat
+      );
+      cloud.position.set(-40 + c * 28, 32 + Math.random() * 10, -5);
+      cloud.scale.set(2.5, 0.5, 1);
+      skylineGroup.add(cloud);
+    }
+  }
+
+  _trenchProps() {
+    /** Imperial station greys: #8599A6 / #BFCDD9 / #455059 / #AFAFAF */
+    const wallMat = this._isDeathStar
+      ? new THREE.MeshStandardMaterial({
+        color: 0x8599a6,
+        roughness: 0.78,
+        metalness: 0.42,
+        emissive: 0x455059,
+        emissiveIntensity: 0.055,
+        flatShading: true,
+      })
+      : new THREE.MeshStandardMaterial({
+        color: 0x5a5c68, roughness: 0.82, metalness: 0.48,
+        emissive: 0x1c1e28, emissiveIntensity: 0.14, flatShading: true,
+      });
+    const turretBaseMat = this._isDeathStar
+      ? new THREE.MeshStandardMaterial({
+        color: 0x7a8a98,
+        roughness: 0.84,
+        metalness: 0.48,
+        emissive: 0x455059,
+        emissiveIntensity: 0.05,
+        flatShading: true,
+      })
+      : new THREE.MeshStandardMaterial({
+        color: 0x4a4c58, roughness: 0.88, metalness: 0.52,
+        emissive: 0x12141a, emissiveIntensity: 0.1, flatShading: true,
+      });
+    const gunMat = this._isDeathStar
+      ? new THREE.MeshStandardMaterial({
+        color: 0x455059,
+        roughness: 0.8,
+        metalness: 0.55,
+        emissive: 0x1a1e24,
+        emissiveIntensity: 0.04,
+        flatShading: true,
+      })
+      : new THREE.MeshStandardMaterial({
+        color: 0x353842, roughness: 0.75, metalness: 0.62,
+        emissive: 0x2a1010, emissiveIntensity: 0.08, flatShading: true,
+      });
+    const beamMat = this._isDeathStar
+      ? new THREE.MeshStandardMaterial({
+        color: 0xbfcdD9,
+        roughness: 0.72,
+        metalness: 0.38,
+        emissive: 0x6a7580,
+        emissiveIntensity: 0.04,
+        flatShading: true,
+      })
+      : new THREE.MeshStandardMaterial({
+        color: 0x484a56, roughness: 0.88, metalness: 0.45, flatShading: true,
+      });
+    const addTurret = (wx, side, z) => {
+      const base = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.55, 0.62, 1.1, 6),
+        turretBaseMat
+      );
+      base.position.set(wx + side * 0.95, 0.55, z);
+      this.propsGroup.add(base);
+      const dome = new THREE.Mesh(
+        new THREE.SphereGeometry(0.42, 6, 5, 0, Math.PI * 2, 0, Math.PI * 0.55),
+        turretBaseMat
+      );
+      dome.position.set(wx + side * 0.95, 1.15, z);
+      this.propsGroup.add(dome);
+      for (const bz of [-0.14, 0.14]) {
+        const barrel = new THREE.Mesh(
+          new THREE.BoxGeometry(0.75, 0.1, 0.1),
+          gunMat
+        );
+        barrel.position.set(wx + side * 1.18, 1.02, z + bz);
+        barrel.rotation.y = side * 0.08;
+        this.propsGroup.add(barrel);
+      }
+    };
+    for (let i = 0; i < this._propCount; i++) {
+      const z = -200 + i * this._propSpacing;
+      const segD = this._propSpacing * 0.94;
+      for (const side of [-1, 1]) {
+        const wx = side * 5.85;
+        const wall = new THREE.Mesh(
+          new THREE.BoxGeometry(2.0, 8.8, segD),
+          wallMat
+        );
+        wall.position.set(wx, 4.4, z);
+        this.propsGroup.add(wall);
+        const tz = z - segD * 0.25 + (i % 3) * (segD * 0.22);
+        addTurret(wx, side, tz);
+        if ((i + side) % 2 === 0) {
+          addTurret(wx, side, z + segD * 0.28);
+        }
+        const rib = new THREE.Mesh(
+          new THREE.BoxGeometry(0.12, 7.2, 0.18),
+          beamMat
+        );
+        rib.position.set(wx + side * 1.02, 4.2, z);
+        this.propsGroup.add(rib);
+      }
+    }
+  }
+
+  _trenchSkyline(skylineGroup) {
+    /** DS: fewer points than before so the trench doesn’t read as a snow globe; finale uses its own starfield. */
+    const nPts = this._isDeathStar ? 2400 : 220;
+    const positions = new Float32Array(nPts * 3);
+    for (let i = 0; i < nPts; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 260;
+      if (this._isDeathStar) {
+        /**
+         * Mix “upper vault” with a band closer to the trench opening so looking straight
+         * ahead is not an empty black wedge (no stars) vs. corners that read as “space”.
+         */
+        const hi = i < nPts * 0.52;
+        positions[i * 3 + 1] = hi
+          ? 34 + Math.random() * 90
+          : 5 + Math.random() * 44;
+        positions[i * 3 + 2] = -55 - Math.random() * 240;
+      } else {
+        positions[i * 3 + 1] = 18 + Math.random() * 85;
+        positions[i * 3 + 2] = -40 - Math.random() * 220;
+      }
+    }
+    const starGeo = new THREE.BufferGeometry();
+    starGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    const starPts = new THREE.Points(
+      starGeo,
+      new THREE.PointsMaterial({
+        color: this._isDeathStar ? 0xd8e4f0 : 0xeeeeff,
+        size: this._isDeathStar ? 0.095 : 0.09,
+        transparent: true,
+        opacity: this._isDeathStar ? 0.82 : 0.75,
+        depthWrite: false,
+        sizeAttenuation: true,
+        /** DS: don’t dim stars with scene fog — avoids a “darker void” wedge vs. corners. */
+        fog: !this._isDeathStar,
+      })
+    );
+    skylineGroup.add(starPts);
+
+    /** DS: pitch-black space + stars only (no Yavin / skyline DS blobs that read as “clouds”). */
+    if (!this._isDeathStar) {
+      const dsMat = new THREE.MeshStandardMaterial({
+        color: 0x55565e, roughness: 0.94, metalness: 0.18,
+        emissive: 0x141418, emissiveIntensity: 0.22, flatShading: true,
+      });
+      const ds = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(22, 1),
+        dsMat
+      );
+      ds.position.set(0, 28, -95);
+      ds.scale.set(1.1, 0.35, 1);
+      skylineGroup.add(ds);
+      const dish = new THREE.Mesh(
+        new THREE.SphereGeometry(6, 8, 6, 0, Math.PI * 2, 0, Math.PI * 0.5),
+        new THREE.MeshStandardMaterial({
+          color: 0x404248, roughness: 0.88, metalness: 0.22,
+          emissive: 0x181a22, emissiveIntensity: 0.18, flatShading: true,
+        })
+      );
+      dish.rotation.x = Math.PI * 0.5;
+      dish.position.set(14, 22, -88);
+      skylineGroup.add(dish);
+    }
+  }
+
+  _durhamSkyline(skylineGroup) {
+    const bldgMat = (color, emissive = 0x000000) =>
+      new THREE.MeshStandardMaterial({
+        color, emissive, emissiveIntensity: 0.7,
+        metalness: 0.1, roughness: 0.85, flatShading: true,
+      });
+
+    const buildings = [
+      { x: -50, w: 9, h: 13, d: 7, color: 0x2a3048 },
+      { x: -38, w: 7, h: 16, d: 6, color: 0x343a55 },
+      { x: -26, w: 10, h: 10, d: 8, color: 0x282e44 },
+      { x: -14, w: 6, h: 14, d: 5, color: 0x303650 },
+      { x: 38, w: 9, h: 12, d: 7, color: 0x282e44 },
+      { x: 50, w: 7, h: 15, d: 6, color: 0x343a55 },
+      { x: 62, w: 10, h: 11, d: 7, color: 0x2a3048 },
+    ];
+
+    const winMat = new THREE.MeshBasicMaterial({
+      color: 0x5588bb, transparent: true, opacity: 0.8,
+    });
+
+    for (const b of buildings) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(b.w, b.h, b.d), bldgMat(b.color, 0x141830)
+      );
+      mesh.position.set(b.x, b.h / 2, 0);
+      skylineGroup.add(mesh);
+
+      const rows = Math.floor(b.h / 2.5);
+      const cols = Math.floor(b.w / 2.2);
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (Math.random() < 0.35) continue;
+          const win = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.6), winMat);
+          win.position.set(
+            b.x - (b.w / 2) + 1.2 + c * 2.2,
+            1.5 + r * 2.5,
+            b.d / 2 + 0.05
+          );
+          skylineGroup.add(win);
+        }
+      }
+    }
+
+    // --- Ansible Tower (main skyscraper with Ansible "A" on top) ---
+    const towerX = 5, towerW = 12, towerH = 30, towerD = 9;
+    const towerMat = bldgMat(0x4a5a6a, 0x1a2535);
+    const tower = new THREE.Mesh(
+      new THREE.BoxGeometry(towerW, towerH, towerD), towerMat
+    );
+    tower.position.set(towerX, towerH / 2, 0);
+    skylineGroup.add(tower);
+
+    const tRows = Math.floor(towerH / 2.2);
+    const tCols = Math.floor(towerW / 1.8);
+    for (let r = 0; r < tRows; r++) {
+      for (let c = 0; c < tCols; c++) {
+        if (Math.random() < 0.2) continue;
+        const win = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.7), winMat);
+        win.position.set(
+          towerX - (towerW / 2) + 1 + c * 1.8,
+          1.8 + r * 2.2,
+          towerD / 2 + 0.06
+        );
+        skylineGroup.add(win);
+      }
+    }
+
+    // Ansible "A" logo on top
+    const aMat = new THREE.MeshStandardMaterial({
+      color: 0xee1100, emissive: 0xee1100, emissiveIntensity: 0.9,
+      metalness: 0.05, roughness: 0.5,
+    });
+    const pixelSize = 0.5;
+    const ansibleA = [
+      [2,0],[1,1],[3,1],[0,2],[4,2],[0,3],[1,3],[2,3],[3,3],[4,3],[0,4],[4,4],[0,5],[4,5]
+    ];
+    const aW = 5 * pixelSize;
+    for (const [dx, dy] of ansibleA) {
+      const px = new THREE.Mesh(
+        new THREE.BoxGeometry(pixelSize * 0.85, pixelSize * 0.85, 0.15), aMat
+      );
+      px.position.set(
+        towerX - aW / 2 + dx * pixelSize + pixelSize / 2,
+        towerH + 1.5 - dy * pixelSize,
+        towerD / 2 + 0.2
+      );
+      skylineGroup.add(px);
+    }
+
+    // --- Durham Water Tower (Lucky Strike style) ---
+    const wtX = -5, wtBaseH = 14, wtTankR = 3.2, wtTankH = 5;
+    const wtPoleMat = bldgMat(0x7a7a7a, 0x2a2a2a);
+    const topR = 1.6;
+    const botR = 4.8;
+    const legPositions = [
+      [-1, -1], [1, -1], [-1, 1], [1, 1]
+    ];
+    const _up = new THREE.Vector3(0, 1, 0);
+    for (const [lx, lz] of legPositions) {
+      const top = new THREE.Vector3(wtX + lx * topR, wtBaseH, lz * topR);
+      const bot = new THREE.Vector3(wtX + lx * botR, 0, lz * botR);
+      const dir = new THREE.Vector3().subVectors(top, bot);
+      const legLen = dir.length();
+      dir.normalize();
+      const leg = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.35, 0.5, legLen, 6), wtPoleMat
+      );
+      leg.position.lerpVectors(bot, top, 0.5);
+      leg.quaternion.setFromUnitVectors(_up, dir);
+      skylineGroup.add(leg);
+    }
+
+    const braceMat = bldgMat(0x666666, 0x1a1a1a);
+    const _braceUp = new THREE.Vector3(0, 1, 0);
+    for (const braceFrac of [0.3, 0.6]) {
+      const r = topR + (botR - topR) * (1 - braceFrac);
+      const y = wtBaseH * braceFrac;
+      for (let i = 0; i < 4; i++) {
+        const a1 = (Math.PI / 4) + (i * Math.PI / 2);
+        const a2 = a1 + Math.PI / 2;
+        const p1 = new THREE.Vector3(wtX + Math.cos(a1) * r, y, Math.sin(a1) * r);
+        const p2 = new THREE.Vector3(wtX + Math.cos(a2) * r, y, Math.sin(a2) * r);
+        const brDir = new THREE.Vector3().subVectors(p2, p1);
+        const bLen = brDir.length();
+        brDir.normalize();
+        const brace = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.15, 0.15, bLen, 4), braceMat
+        );
+        brace.position.lerpVectors(p1, p2, 0.5);
+        brace.quaternion.setFromUnitVectors(_braceUp, brDir);
+        skylineGroup.add(brace);
+      }
+    }
+
+    const tankMat = bldgMat(0xccccbb, 0x222211);
+    const tank = new THREE.Mesh(
+      new THREE.CylinderGeometry(wtTankR, wtTankR, wtTankH, 16), tankMat
+    );
+    tank.position.set(wtX, wtBaseH + wtTankH / 2, 0);
+    skylineGroup.add(tank);
+
+    const bowlGeo = new THREE.CylinderGeometry(wtTankR, topR + 0.2, 2, 16);
+    const bowl = new THREE.Mesh(bowlGeo, tankMat);
+    bowl.position.set(wtX, wtBaseH - 0.5, 0);
+    skylineGroup.add(bowl);
+
+    const roof = new THREE.Mesh(
+      new THREE.ConeGeometry(wtTankR + 0.3, 2.5, 16), tankMat
+    );
+    roof.position.set(wtX, wtBaseH + wtTankH + 1.25, 0);
+    skylineGroup.add(roof);
+
+    const stripeMat = new THREE.MeshStandardMaterial({
+      color: 0xcc2200, emissive: 0xcc2200, emissiveIntensity: 0.5,
+      metalness: 0.1, roughness: 0.5,
+    });
+    const stripe = new THREE.Mesh(
+      new THREE.CylinderGeometry(wtTankR + 0.08, wtTankR + 0.08, 1.4, 16), stripeMat
+    );
+    stripe.position.set(wtX, wtBaseH + wtTankH / 2 + 0.5, 0);
+    skylineGroup.add(stripe);
+
+    // --- Smokestack ---
+    const ssX = 22, ssH = 22;
+    const ssMat = bldgMat(0x884422, 0x331100);
+    const stack = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.2, 1.8, ssH, 8), ssMat
+    );
+    stack.position.set(ssX, ssH / 2, 0);
+    skylineGroup.add(stack);
+    // top rim
+    const rimMat = bldgMat(0x553311, 0x221100);
+    const rim = new THREE.Mesh(
+      new THREE.TorusGeometry(1.4, 0.3, 6, 12), rimMat
+    );
+    rim.position.set(ssX, ssH, 0);
+    rim.rotation.x = Math.PI / 2;
+    skylineGroup.add(rim);
+    // smoke puffs
+    const smokeMat = new THREE.MeshStandardMaterial({
+      color: 0x888888, transparent: true, opacity: 0.3,
+      roughness: 0.95, metalness: 0.0,
+    });
+    for (let p = 0; p < 4; p++) {
+      const puff = new THREE.Mesh(
+        new THREE.SphereGeometry(1 + Math.random() * 1.5, 6, 5), smokeMat
+      );
+      puff.position.set(ssX + (Math.random() - 0.5) * 2, ssH + 2 + p * 2, 0);
+      puff.scale.set(1.5, 0.8, 1);
+      skylineGroup.add(puff);
+    }
+
+    // --- Baseball Stadium (Durham Bulls style) ---
+    const stadX = -30, stadW = 18, stadH = 8, stadD = 12;
+    const stadMat = bldgMat(0x3a4858, 0x141830);
+    const base = new THREE.Mesh(
+      new THREE.BoxGeometry(stadW, stadH, stadD), stadMat
+    );
+    base.position.set(stadX, stadH / 2, 0);
+    skylineGroup.add(base);
+    // curved seating (half-cylinder)
+    const seatMat = bldgMat(0x2a3a48, 0x0a1020);
+    const seats = new THREE.Mesh(
+      new THREE.CylinderGeometry(stadW / 2, stadW / 2, stadD, 12, 1, false, 0, Math.PI),
+      seatMat
+    );
+    seats.rotation.z = Math.PI / 2;
+    seats.rotation.y = Math.PI / 2;
+    seats.position.set(stadX, stadH + 1, 0);
+    seats.scale.set(1, 0.4, 1);
+    skylineGroup.add(seats);
+    // light towers at stadium
+    const lightPoleMat = bldgMat(0x5a5a5a, 0x111111);
+    for (const dx of [-stadW / 2 - 1, stadW / 2 + 1]) {
+      const pole = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.2, 0.25, stadH + 6, 6), lightPoleMat
+      );
+      pole.position.set(stadX + dx, (stadH + 6) / 2, stadD / 2 + 1);
+      skylineGroup.add(pole);
+      // light fixture
+      const lightMat = new THREE.MeshStandardMaterial({
+        color: 0xffee88, emissive: 0xffee88, emissiveIntensity: 0.8,
+      });
+      const light = new THREE.Mesh(
+        new THREE.BoxGeometry(1.5, 0.5, 0.5), lightMat
+      );
+      light.position.set(stadX + dx, stadH + 6, stadD / 2 + 1);
+      skylineGroup.add(light);
+    }
+    // "BULLS" sign
+    const signMat = new THREE.MeshStandardMaterial({
+      color: 0x0044aa, emissive: 0x0044aa, emissiveIntensity: 0.6,
+    });
+    const sign = new THREE.Mesh(
+      new THREE.BoxGeometry(8, 2, 0.3), signMat
+    );
+    sign.position.set(stadX, stadH + 0.5, stadD / 2 + 0.2);
+    skylineGroup.add(sign);
+
+    // --- Durham City Flag on flagpole ---
+    const flagX = 25, flagZ = 0;
+    const poleH = 22;
+
+    // Pole
+    const poleMat = new THREE.MeshStandardMaterial({ color: 0x999999, metalness: 0.7, roughness: 0.3 });
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.18, poleH, 8), poleMat);
+    pole.position.set(flagX, poleH / 2, flagZ);
+    skylineGroup.add(pole);
+
+    // Pole cap
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.3, 6, 6), poleMat);
+    cap.position.set(flagX, poleH + 0.15, flagZ);
+    skylineGroup.add(cap);
+
+    // Flag — 3 vertical stripes: red, gold, blue
+    const flagW = 6, flagH = 4;
+    const stripeW = flagW / 3;
+
+    const flagRedMat = new THREE.MeshStandardMaterial({
+      color: 0xdd2222, emissive: 0x331111, emissiveIntensity: 0.4,
+      side: THREE.DoubleSide,
+    });
+    const flagGoldMat = new THREE.MeshStandardMaterial({
+      color: 0xeecc00, emissive: 0x332800, emissiveIntensity: 0.4,
+      side: THREE.DoubleSide,
+    });
+    const flagBlueMat = new THREE.MeshStandardMaterial({
+      color: 0x2255aa, emissive: 0x0a1133, emissiveIntensity: 0.4,
+      side: THREE.DoubleSide,
+    });
+
+    const flagTop = poleH - 0.5;
+    const flagBaseZ = flagZ + 0.2;
+
+    const redStripe = new THREE.Mesh(new THREE.PlaneGeometry(stripeW, flagH), flagRedMat);
+    redStripe.position.set(flagX + stripeW * 0.5 + 0.1, flagTop - flagH / 2, flagBaseZ);
+    skylineGroup.add(redStripe);
+
+    const goldStripe = new THREE.Mesh(new THREE.PlaneGeometry(stripeW, flagH), flagGoldMat);
+    goldStripe.position.set(flagX + stripeW * 1.5 + 0.1, flagTop - flagH / 2, flagBaseZ);
+    skylineGroup.add(goldStripe);
+
+    const blueStripe = new THREE.Mesh(new THREE.PlaneGeometry(stripeW, flagH), flagBlueMat);
+    blueStripe.position.set(flagX + stripeW * 2.5 + 0.1, flagTop - flagH / 2, flagBaseZ);
+    skylineGroup.add(blueStripe);
+
+    // Stars on blue stripe (7 white stars in the Durham flag pattern)
+    const starMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.6,
+    });
+    const starPositions = [
+      [0, 0.8], [-0.5, 0.2], [0.5, 0.2],
+      [-0.7, -0.5], [0, -0.4], [0.7, -0.5],
+      [0, -1.2],
+    ];
+    const blueCenter = flagX + stripeW * 2.5 + 0.1;
+    const blueMidY = flagTop - flagH / 2;
+    for (const [sx, sy] of starPositions) {
+      const star = new THREE.Mesh(
+        new THREE.BoxGeometry(0.35, 0.35, 0.05), starMat
+      );
+      star.position.set(blueCenter + sx * 0.7, blueMidY + sy * 0.9, flagBaseZ + 0.05);
+      skylineGroup.add(star);
+    }
+  }
+
+  _horizon() {
+    const t = this.theme;
+    const isCity = t.scenery === "city" || t.scenery === "durham";
+
+    const gridColors = {
+      city: [0x336688, 0x1a2840], durham: [0x336688, 0x1a2840],
+      forest: [0x447744, 0x2a4a2a], desert: [0x998855, 0x665530],
+      swamp: [0x3a5530, 0x1a2a14], snow: [0x7788aa, 0x445566],
+      water: [0x2255aa, 0x0a1840], coast: [0x557755, 0x2a3a2a],
+      trench: [0x4a4c58, 0x2a2c38],
+    };
+    /** Coast uses mesh shoreline + skyline ocean; GridHelper reads as a fake checkerboard “sea”.
+     * Developer experience (C) desert: grid reads as ugly “carpet” — use sand texture + ripple only. */
+    if (!this._isDeathStar && t.scenery !== "coast" && !(this.levelId === "C" && t.scenery === "desert")) {
+      const [gc1, gc2] = gridColors[t.scenery] || [0x888888, 0x444444];
+      const grid = new THREE.GridHelper(400, 80, gc1, gc2);
+      grid.position.y = 0.01;
+      grid.position.z = -120;
+      grid.scale.set(1.2, 1, 1.5);
+      this.group.add(grid);
+    }
+
+    if (!this._isDeathStar) {
+      const sky = new THREE.Mesh(
+        new THREE.PlaneGeometry(600, 200),
+        new THREE.MeshBasicMaterial({
+          color: t.sky, transparent: true, opacity: 0.95,
+        })
+      );
+      sky.position.set(0, 80, -200);
+      this.group.add(sky);
+    }
+    /** DS: no backdrop mesh — `scene.background` stays uniform black; a plane can fog/tone-map differently. */
+  }
+
+  _lights() {
+    const isCity = this.theme.scenery === "city" || this.theme.scenery === "durham";
+    const isTrench = this.theme.scenery === "trench";
+
+    const amb = new THREE.AmbientLight(
+      isTrench ? (this._isDeathStar ? 0x8599a6 : 0x445566) : isCity ? 0xb8c8e0 : 0xdde8f0,
+      isTrench ? (this._isDeathStar ? 0.32 : 0.35) : isCity ? 0.72 : 0.9
+    );
+    this.group.add(amb);
+
+    const hemi = new THREE.HemisphereLight(
+      isTrench ? (this._isDeathStar ? 0xbfcdD9 : 0x223344) : isCity ? 0x8899bb : 0xaabbcc,
+      isTrench ? (this._isDeathStar ? 0x455059 : 0x080810) : isCity ? 0x1a1520 : 0x443322,
+      isTrench ? (this._isDeathStar ? 0.38 : 0.4) : isCity ? 0.55 : 0.65
+    );
+    hemi.position.set(0, 80, 0);
+    this.group.add(hemi);
+
+    const key = new THREE.DirectionalLight(
+      isTrench ? (this._isDeathStar ? 0xafafaf : 0xaabbcc) : isCity ? 0xd8e8ff : 0xfff8e8,
+      isTrench ? (this._isDeathStar ? 0.52 : 0.55) : isCity ? 0.95 : 1.1
+    );
+    key.position.set(-6, 32, 28);
+    this.group.add(key);
+
+    const rim = new THREE.DirectionalLight(
+      isTrench ? (this._isDeathStar ? 0x8599a6 : 0x6688aa) : isCity ? 0xaaccff : 0xddccaa,
+      isTrench ? (this._isDeathStar ? 0.3 : 0.25) : isCity ? 0.45 : 0.55
+    );
+    rim.position.set(0, 14, 42);
+    this.group.add(rim);
+
+    if (isTrench && !this._isDeathStar) {
+      const trenchFill = new THREE.PointLight(
+        0xff6644, 0.4, 80, 2
+      );
+      trenchFill.position.set(0, 3, -40);
+      this.group.add(trenchFill);
+    } else if (isCity) {
+      const fillL = new THREE.PointLight(0x55ddff, 1.15, 55, 1.8);
+      fillL.position.set(-10, 4.5, 8);
+      this.group.add(fillL);
+      const fillR = new THREE.PointLight(0xcc77ff, 0.95, 55, 1.8);
+      fillR.position.set(10, 4.5, 8);
+      this.group.add(fillR);
+      const accent = new THREE.PointLight(0xff66aa, 0.55, 90, 2);
+      accent.position.set(0, 9, -25);
+      this.group.add(accent);
+    } else {
+      const sun = new THREE.DirectionalLight(0xffeedd, 0.6);
+      sun.position.set(30, 60, -50);
+      this.group.add(sun);
+    }
+  }
+
+  setRainbow(on) {
+    this._rainbowMode = on;
+    if (!on && this._roadMat) {
+      this._roadMat.color.setHex(this._roadOrigColor);
+      this._roadMat.emissive.setHex(this._roadOrigEmissive);
+      this._roadMat.emissiveIntensity = 0.12;
+      if (this._edgeMat) {
+        this._edgeMat.color.setHex(this._edgeOrigColor);
+        this._edgeMat.emissive.setHex(this._edgeOrigEmissive);
+        this._edgeMat.emissiveIntensity = 0.6;
+      }
+    }
+  }
+
+  update(dt, worldSpeed) {
+    const dz = worldSpeed * dt;
+
+    if (this._desertSandMap) {
+      const sandScroll = (worldSpeed * dt) / 400 * 11;
+      this._desertSandMap.offset.y += sandScroll;
+      if (this._desertSandRoughnessMap) this._desertSandRoughnessMap.offset.y += sandScroll;
+    }
+
+    if (this._roiOceanMat) {
+      this._roiOceanMat.uniforms.uTime.value += dt;
+    }
+
+    if (this._rainbowMode && this._roadMat) {
+      const hue = (performance.now() * 0.0003) % 1;
+      this._roadMat.color.setHSL(hue, 0.7, 0.45);
+      this._roadMat.emissive.setHSL(hue, 0.8, 0.15);
+      this._roadMat.emissiveIntensity = 0.35;
+      if (this._edgeMat) {
+        const edgeHue = (hue + 0.5) % 1;
+        this._edgeMat.color.setHSL(edgeHue, 0.9, 0.6);
+        this._edgeMat.emissive.setHSL(edgeHue, 1.0, 0.4);
+        this._edgeMat.emissiveIntensity = 0.9;
+      }
+    }
+
+    if (this._curve) {
+      this._scrollDist += worldSpeed * dt;
+    }
+
+    // Road segments (curved levels only)
+    if (this._roadSegGroup) {
+      this._roadSegGroup.position.z += dz;
+      if (this._roadSegGroup.position.z > this._roadSegSpacing) {
+        this._roadSegGroup.position.z -= this._roadSegSpacing;
+      }
+      for (const seg of this._roadSegGroup.children) {
+        const wz = this._roadSegGroup.position.z + seg.position.z;
+        seg.position.x = this.getCurveX(wz);
+      }
+    }
+
+    if (this.markerGroup) {
+      this.markerGroup.position.z += dz;
+      if (this.markerGroup.position.z > this._markerSpacing) {
+        this.markerGroup.position.z -= this._markerSpacing;
+      }
+    }
+
+    // Apply curve offsets to lane markers
+    if (this._curve && this.markerGroup && this._markerMeshes.length) {
+      const gz = this.markerGroup.position.z;
+      for (const m of this._markerMeshes) {
+        const wz = gz + m.position.z;
+        m.position.x = m.userData.baseX + this.getCurveX(wz);
+      }
+    }
+
+    if (this.edgeGroup) {
+      this.edgeGroup.position.z += dz;
+      if (this.edgeGroup.position.z > this._edgeSpacing) {
+        this.edgeGroup.position.z -= this._edgeSpacing;
+      }
+    }
+
+    // Apply curve offsets to edge strips
+    if (this._curve && this.edgeGroup && this._edgeMeshes.length) {
+      const gz = this.edgeGroup.position.z;
+      for (const e of this._edgeMeshes) {
+        const wz = gz + e.position.z;
+        e.position.x = e.userData.baseX + this.getCurveX(wz);
+      }
+    }
+
+    // Props: slot-based wrapping for forest/desert (individual groups),
+    // group-based for city (simpler shapes that wrap cleanly)
+    if (this._propSlots.length > 0) {
+      const despawn = 20;
+      const range = this._propTotalRange;
+      for (const slot of this._propSlots) {
+        slot.position.z += dz;
+        if (slot.position.z > despawn) {
+          slot.position.z -= range;
+        }
+        // Curve offset for prop slots
+        if (this._curve) {
+          slot.position.x = this.getCurveX(slot.position.z);
+        }
+      }
+    } else if (this.propsGroup) {
+      this.propsGroup.position.z += dz;
+      const sp = this._propSpacing;
+      while (this.propsGroup.position.z > sp) {
+        this.propsGroup.position.z -= sp;
+      }
+    }
+
+    if (this._finishLine) {
+      this._finishLine.position.z += dz;
+      this._finishZ += dz;
+    }
+  }
+
+  spawnFinishLine(playerZ, worldSpeed = 28, timeLeft = 10) {
+    if (this._finishLine) return;
+    const g = new THREE.Group();
+    const distance = Math.max(150, Math.min(500, worldSpeed * timeLeft));
+    const z = playerZ - distance;
+
+    if (this.theme.scenery === "trench") {
+      const frameMat = new THREE.MeshStandardMaterial({
+        color: 0x454850, roughness: 0.88, metalness: 0.42,
+        emissive: 0x181a20, emissiveIntensity: 0.1, flatShading: true,
+      });
+      const glowMat = new THREE.MeshStandardMaterial({
+        color: 0xff5520, emissive: 0xff4400, emissiveIntensity: 1.0, flatShading: true,
+      });
+      const span = 12;
+      for (const side of [-1, 1]) {
+        const pillar = new THREE.Mesh(
+          new THREE.BoxGeometry(0.45, 5.5, 0.45),
+          frameMat
+        );
+        pillar.position.set(side * span * 0.42, 2.75, z);
+        g.add(pillar);
+      }
+      const lintel = new THREE.Mesh(
+        new THREE.BoxGeometry(span + 0.6, 0.35, 0.35),
+        frameMat
+      );
+      lintel.position.set(0, 5.4, z);
+      g.add(lintel);
+      /** Portal flush with trench deck (road plane y≈0), not floating mid-air. */
+      const portalY = 0.11;
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(1.15, 0.12, 10, 24),
+        glowMat
+      );
+      ring.rotation.x = Math.PI / 2;
+      ring.position.set(0, portalY, z + 0.1);
+      g.add(ring);
+      const port = new THREE.Mesh(
+        new THREE.CircleGeometry(0.85, 20),
+        new THREE.MeshBasicMaterial({
+          color: 0xff4400, transparent: true, opacity: 0.75,
+        })
+      );
+      port.rotation.x = -Math.PI / 2;
+      port.position.set(0, portalY, z + 0.18);
+      g.add(port);
+      const beamL = new THREE.Mesh(
+        new THREE.BoxGeometry(0.08, 0.12, span * 0.85),
+        new THREE.MeshBasicMaterial({ color: 0xffaa44 })
+      );
+      beamL.position.set(0, 0.06, z);
+      g.add(beamL);
+      this.group.add(g);
+      this._finishLine = g;
+      this._finishZ = z;
+      return;
+    }
+
+    const white = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x333333, emissiveIntensity: 0.3 });
+    const black = new THREE.MeshStandardMaterial({ color: 0x111111 });
+
+    // Checkered banner across the road
+    const tileSize = 0.8;
+    const cols = 16;
+    const rows = 3;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const mat = (r + c) % 2 === 0 ? white.clone() : black.clone();
+        const tile = new THREE.Mesh(new THREE.BoxGeometry(tileSize, tileSize, 0.08), mat);
+        tile.position.set(
+          (c - cols / 2 + 0.5) * tileSize,
+          3.5 + r * tileSize,
+          z
+        );
+        g.add(tile);
+      }
+    }
+
+    // Support poles
+    for (const side of [-1, 1]) {
+      const pole = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.08, 0.08, 6, 8),
+        white.clone()
+      );
+      pole.position.set(side * (cols / 2) * tileSize, 3, z);
+      g.add(pole);
+    }
+
+    // Waving checkered flags on top of poles
+    for (const side of [-1, 1]) {
+      const flagGroup = new THREE.Group();
+      const flagRows = 4;
+      const flagCols = 5;
+      const fs = 0.25;
+      for (let fr = 0; fr < flagRows; fr++) {
+        for (let fc = 0; fc < flagCols; fc++) {
+          const mat = (fr + fc) % 2 === 0 ? white.clone() : black.clone();
+          const ft = new THREE.Mesh(new THREE.BoxGeometry(fs, fs, 0.03), mat);
+          ft.position.set(fc * fs + fs / 2, -fr * fs, 0);
+          flagGroup.add(ft);
+        }
+      }
+      flagGroup.position.set(
+        side * (cols / 2) * tileSize + side * 0.3,
+        6.2,
+        z
+      );
+      flagGroup.rotation.z = side * 0.15;
+      g.add(flagGroup);
+    }
+
+    this.group.add(g);
+    this._finishLine = g;
+    this._finishZ = z;
+  }
+
+  getFinishZ() {
+    return this._finishZ || null;
+  }
+
+  removeFinishLine() {
+    if (this._finishLine) {
+      this.group.remove(this._finishLine);
+      this._finishLine.traverse((c) => {
+        if (c.geometry) c.geometry.dispose();
+        if (c.material) c.material.dispose();
+      });
+      this._finishLine = null;
+      this._finishZ = null;
+    }
+  }
+
+  dispose() {
+    this.removeFinishLine();
+    this.scene.remove(this.group);
+    /** Dedupe materials — ROI ocean shares one ShaderMaterial across strips */
+    const materials = new Set();
+    this.group.traverse((c) => {
+      if (c.geometry) c.geometry.dispose();
+      if (c.material) {
+        const m = c.material;
+        if (Array.isArray(m)) m.forEach((x) => materials.add(x));
+        else materials.add(m);
+      }
+    });
+    materials.forEach((m) => m.dispose());
+  }
+}

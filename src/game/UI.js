@@ -1,0 +1,2356 @@
+import { getLeaderboard, loadAchievements, ACHIEVEMENT_DEFS, getDeathStarTrenchUnlocked } from "../utils/storage.js";
+import { fetchGlobalLeaderboard } from "../utils/firebase.js";
+import * as THREE from "three";
+import { LEVELS, DRIVERS, getSummitBoothThemeUrl } from "../data/config.js";
+import { Player } from "./Player.js";
+
+/**
+ * DOM overlays + HUD updates (Built to Automate)
+ */
+export class UI {
+  constructor() {
+    this.el = {
+      mainMenu: document.getElementById("main-menu"),
+      pauseMenu: document.getElementById("pause-menu"),
+      gameOver: document.getElementById("game-over"),
+      quiz: document.getElementById("quiz-overlay"),
+      recovery: document.getElementById("recovery-overlay"),
+      recoveryFirstTip: document.getElementById("recovery-first-tip"),
+      recoveryCountdown: document.getElementById("recovery-countdown"),
+      recoveryNo: document.getElementById("recovery-no"),
+      hud: document.getElementById("hud"),
+      flash: document.getElementById("screen-flash"),
+      canvasWrap: document.getElementById("game-root"),
+
+      health: document.getElementById("hud-health"),
+      score: document.getElementById("hud-score"),
+      speed: document.getElementById("hud-speed"),
+      streak: document.getElementById("hud-streak"),
+      playbookCount: document.getElementById("hud-playbooks"),
+      playbookPts: document.getElementById("hud-playbook-pts"),
+      collectionCount: document.getElementById("hud-collections"),
+      collectionPts: document.getElementById("hud-collection-pts"),
+      shield: document.getElementById("hud-shield"),
+      flow: document.getElementById("hud-flow"),
+      remIcons: document.getElementById("rem-icons"),
+      status: document.getElementById("hud-status"),
+      boostBar: document.getElementById("boost-bar"),
+      boostFill: document.getElementById("boost-fill"),
+
+      bestScoreMenu: document.getElementById("menu-best"),
+      goScore: document.getElementById("go-score"),
+      goHits: document.getElementById("go-hits"),
+      goPickups: document.getElementById("go-pickups"),
+      goCorrect: document.getElementById("go-correct"),
+      goEntry: document.getElementById("go-entry"),
+      goNameInput: document.getElementById("go-name-input"),
+      goCountry: document.getElementById("go-country"),
+      goLeaderboard: document.getElementById("go-leaderboard"),
+      goRankBanner: document.getElementById("go-rank-banner"),
+      lbBody: document.getElementById("lb-body"),
+      lbScroll: document.getElementById("lb-scroll"),
+
+      quizPrompt: document.getElementById("quiz-prompt"),
+      quizOpts: document.getElementById("quiz-options"),
+      quizQuestionPanel: document.getElementById("quiz-question-panel"),
+      quizResultPanel: document.getElementById("quiz-result-panel"),
+      quizResultTitle: document.getElementById("quiz-result-title"),
+      quizResultLines: document.getElementById("quiz-result-lines"),
+      quizResultExplain: document.getElementById("quiz-result-explain"),
+      quizResultTimer: document.getElementById("quiz-result-timer"),
+      quizResultCountdown: document.getElementById("quiz-result-countdown"),
+
+      billboardOverlay: document.getElementById("billboard-overlay"),
+      billboardLabel: document.getElementById("billboard-label"),
+      billboardContent: document.getElementById("billboard-content"),
+      billboardBonus: document.getElementById("billboard-bonus"),
+      billboardExitHint: document.getElementById("billboard-exit-hint"),
+
+      levelSelect: document.getElementById("level-select"),
+      hudLevelName: document.getElementById("hud-level-name"),
+
+      quizCountdown: document.getElementById("quiz-countdown"),
+      damagePopup: document.getElementById("damage-popup"),
+      pickupPopup: document.getElementById("pickup-popup"),
+      hippoAnnounce: document.getElementById("hippo-announce"),
+      ttBar: document.getElementById("tt-cooldown-bar"),
+      ttFill: document.getElementById("tt-cooldown-fill"),
+
+      manualBoost: document.getElementById("hud-manual-boost"),
+      mbFill: document.getElementById("mb-fill"),
+      brakeVignette: document.getElementById("brake-vignette"),
+      finishFill: document.getElementById("finish-fill"),
+      finishTime: document.getElementById("finish-time"),
+
+      attractScores: document.getElementById("attract-scores"),
+      attractScoresList: document.getElementById("attract-scores-list"),
+
+      comboDisplay: document.getElementById("combo-display"),
+      achievementPopup: document.getElementById("achievement-popup"),
+      quizToggle: document.getElementById("quiz-toggle"),
+      menuAchievements: document.getElementById("menu-achievements"),
+      achievementsGrid: document.getElementById("achievements-grid"),
+
+      driverSelect: document.getElementById("driver-select"),
+      driverCards: document.getElementById("driver-cards"),
+      driverDetail: document.getElementById("driver-detail"),
+      driverDetailPhoto: document.getElementById("driver-detail-photo"),
+      driverDetailName: document.getElementById("driver-detail-name"),
+      driverDetailOrigin: document.getElementById("driver-detail-origin"),
+      driverDetailBio: document.getElementById("driver-detail-bio"),
+
+      tutorialOverlay: document.getElementById("tutorial-overlay"),
+      tutorialTip: document.getElementById("tutorial-tip"),
+      tutorialTipText: document.getElementById("tutorial-tip-text"),
+      tutorialBbNudge: document.getElementById("tutorial-bb-nudge"),
+      tutorialBbNudgePointer: document.getElementById("tutorial-bb-nudge-pointer"),
+      tutorialBbNudgeText: document.getElementById("tutorial-bb-nudge-text"),
+      skipTutorialBtn: document.getElementById("btn-skip-tutorial"),
+      tutorialBanner: document.getElementById("tutorial-banner"),
+      tutorialChecklist: document.getElementById("tutorial-checklist"),
+      tutorialChecklistItems: document.getElementById("tutorial-checklist-items"),
+      tutorialCountdown: document.getElementById("tutorial-countdown"),
+      tutorialCountdownNum: document.getElementById("tutorial-countdown-num"),
+      hudLegend: document.querySelector(".hud-legend"),
+
+      levelComplete: document.getElementById("level-complete"),
+      lcTitle: document.getElementById("lc-title"),
+      lcMessage: document.getElementById("lc-message"),
+      lcScore: document.getElementById("lc-score"),
+      lcHits: document.getElementById("lc-hits"),
+      lcPickups: document.getElementById("lc-pickups"),
+      lcCorrect: document.getElementById("lc-correct"),
+      lcEntry: document.getElementById("lc-entry"),
+      lcNameInput: document.getElementById("lc-name-input"),
+      lcCountry: document.getElementById("lc-country"),
+      lcLeaderboard: document.getElementById("lc-leaderboard"),
+      lcRankBanner: document.getElementById("lc-rank-banner"),
+      lcLbBody: document.getElementById("lc-lb-body"),
+      lcLbScroll: document.getElementById("lc-lb-scroll"),
+
+      godzillaHud: document.getElementById("godzilla-hud"),
+      gzTime: document.getElementById("gz-time"),
+      gzScore: document.getElementById("gz-score"),
+      gzCrushed: document.getElementById("gz-crushed"),
+      godzillaScore: document.getElementById("godzilla-score"),
+      gzFinalScore: document.getElementById("gz-final-score"),
+      gzFinalCrushed: document.getElementById("gz-final-crushed"),
+      gzFinalPct: document.getElementById("gz-final-pct"),
+    };
+
+    this._selectedDriver = "anshul";
+    this._statusTimer = null;
+    this._recoveryCountdownId = null;
+    this._recoveryAutoTimer = null;
+    this._quizCountdownId = null;
+    this._quizAutoTimer = null;
+    this._levelSelectReturnTo = "main_menu";
+    this._driverSelectReturnTo = "main_menu";
+    this._summitLinkLevelId = "A";
+    this._scaloniHud = false;
+    this._populateCountrySelect();
+    this._bindButtons();
+    this._syncLevelCardLabels();
+    this.syncDeathStarTrenchCardVisibility();
+    this._drawLevelPreviews();
+    this._syncSummitDockVisibility();
+    this._mobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+  }
+
+  get isMobile() { return this._mobile; }
+
+  /** Death Star trench: no scripted tutorial or “How to play” from the main menu. */
+  _rebuildMainMenuNavButtons() {
+    const hp = document.getElementById("btn-how-to-play");
+    const hideHowTo = this._summitLinkLevelId === "DS";
+    if (hp) {
+      hp.classList.toggle("hidden", hideHowTo);
+      hp.setAttribute("aria-hidden", hideHowTo ? "true" : "false");
+    }
+    const ids = [
+      "btn-start",
+      "btn-choose-level-menu",
+      "btn-choose-driver",
+    ];
+    if (!hideHowTo) ids.push("btn-how-to-play");
+    ids.push("btn-highscores", "btn-achievements", "btn-credits");
+    this._menuBtns = ids.map((id) => document.getElementById(id)).filter(Boolean);
+    if (this._menuIdx >= this._menuBtns.length) this._menuIdx = 0;
+    this._updateMenuFocus();
+  }
+
+  syncDeathStarTrenchCardVisibility() {
+    const card = document.querySelector(".level-card-ds");
+    if (!card) return;
+    const on = getDeathStarTrenchUnlocked();
+    card.classList.toggle("hidden", !on);
+    card.setAttribute("aria-hidden", on ? "false" : "true");
+  }
+
+  refreshLevelSelectPreviews() {
+    this._drawLevelPreviews();
+  }
+
+  _syncLevelCardLabels() {
+    document.querySelectorAll(".level-card").forEach((card) => {
+      const id = card.dataset.level;
+      const lvl = LEVELS[id];
+      if (!lvl) return;
+      const label = card.querySelector(".level-card-label");
+      const sub = card.querySelector(".level-card-sub");
+      if (label) label.textContent = lvl.name;
+      if (sub) sub.textContent = lvl.subtitle;
+    });
+  }
+
+  _populateCountrySelect() {
+    const countries = [
+      "US","GB","CA","AU","DE","FR","ES","IT","PT","NL","BE","AT","CH",
+      "SE","NO","DK","FI","IE","PL","CZ","RO","HU","BG","HR","SK","SI",
+      "LT","LV","EE","UA","RU","TR","GR","IL","IN","JP","KR","CN","TW",
+      "SG","MY","TH","PH","ID","VN","BR","MX","AR","CL","CO","PE","ZA",
+      "NG","EG","KE","NZ","SA","AE","QA","PK",
+    ];
+    for (const sel of [this.el.goCountry, this.el.lcCountry]) {
+      if (!sel) continue;
+      sel.innerHTML = "";
+      for (const code of countries) {
+        const opt = document.createElement("option");
+        opt.value = code;
+        opt.textContent = this._countryFlag(code);
+        sel.appendChild(opt);
+      }
+      sel.value = "US";
+    }
+  }
+
+  _bindButtons() {
+    const on = (id, fn) => {
+      const b = document.getElementById(id);
+      if (b) b.addEventListener("click", fn);
+    };
+    on("btn-start", () => { if (this.onStart) this.onStart(); });
+    on("btn-how-to-play", () => this._openTutorial());
+    on("btn-tutorial-back", () => this._closeTutorialToMenu());
+    on("btn-tutorial-got-it", () => { if (this.onTutorialGotIt) this.onTutorialGotIt(); });
+    on("btn-skip-tutorial", () => { if (this.onSkipTutorial) this.onSkipTutorial(); });
+    on("btn-highscores", () => this._showMenuLeaderboard());
+    on("btn-lb-back", () => this._hideMenuLeaderboard());
+    on("btn-achievements", () => this._showMenuAchievements());
+    on("btn-ach-back", () => this._hideMenuAchievements());
+    on("btn-credits", () => this._showMenuCredits());
+    on("btn-credits-back", () => this._hideMenuCredits());
+    on("btn-resume", () => this.onResume && this.onResume());
+    on("btn-restart-pause", () => this.onRestart && this.onRestart());
+    on("btn-menu-pause", () => this.onMenu && this.onMenu());
+    on("btn-restart-go", () => this.onRestart && this.onRestart());
+    on("btn-menu-go", () => this.onMenu && this.onMenu());
+    on("btn-save-score", () => this.onSaveScore && this.onSaveScore());
+    const nameInput = document.getElementById("go-name-input");
+    if (nameInput) {
+      nameInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          if (this.onSaveScore) this.onSaveScore();
+        }
+      });
+    }
+    on("recovery-yes", () => this.onRecoveryYes && this.onRecoveryYes());
+    on("recovery-no", () => this.onRecoveryNo && this.onRecoveryNo());
+    on("btn-unstick", () => this.onUnstick && this.onUnstick());
+    on("btn-billboard-close", () => this.onBillboardClose && this.onBillboardClose());
+
+    if (this.el.billboardOverlay) {
+      this.el.billboardOverlay.addEventListener("click", (e) => {
+        if (e.target === this.el.billboardOverlay) {
+          if (this.onBillboardClose) this.onBillboardClose();
+        }
+      });
+      this.el.billboardOverlay.addEventListener("mousemove", () => {
+        if (!this.el.billboardOverlay.classList.contains("hidden") &&
+            document.activeElement && document.activeElement.tagName === "IFRAME") {
+          document.body.focus();
+        }
+      });
+    }
+
+    const escCloseBillboard = (e) => {
+      if (e.code === "Escape" && this.el.billboardOverlay &&
+          !this.el.billboardOverlay.classList.contains("hidden")) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (this.onBillboardClose) this.onBillboardClose();
+        return true;
+      }
+      return false;
+    };
+    window.addEventListener("keydown", (e) => { escCloseBillboard(e); }, true);
+
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "Escape" && this.el.tutorialOverlay &&
+          !this.el.tutorialOverlay.classList.contains("hidden")) {
+        e.preventDefault();
+        e.stopPropagation();
+        this._closeTutorialToMenu();
+        return;
+      }
+      if (escCloseBillboard(e)) return;
+      if (e.code === "Escape" && this._menuEscapeBack()) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, true);
+
+    on("btn-touch-pause", () => this.onTouchPause && this.onTouchPause());
+
+    on("btn-hud-info", () => this.onHudInfoOpen && this.onHudInfoOpen());
+    on("btn-hud-close", () => this.onHudInfoClose && this.onHudInfoClose());
+    on("btn-hud-resume", () => this.onHudInfoClose && this.onHudInfoClose());
+    on("btn-hud-menu", () => { this.closeMobileHud(); if (this.onMenu) this.onMenu(); });
+    on("btn-mobile-secret", () => this.onMobileSecret && this.onMobileSecret());
+    on("btn-gz-back", () => { this.hideGodzillaScore(); if (this.onMenu) this.onMenu(); });
+
+    on("btn-quiz-skip", () => this.onQuizSkip && this.onQuizSkip());
+    on("btn-choose-driver", () => this._openDriverSelect("main_menu"));
+    on("btn-choose-driver-pause", () => this._openDriverSelect("running"));
+    on("btn-driver-back", () => this._closeDriverSelect());
+    on("btn-select-driver", () => this._confirmDriver());
+
+    window.addEventListener("keydown", (e) => {
+      if (!this.isDriverSelectVisible() || this.el.driverDetail.classList.contains("hidden")) return;
+      const keys = Object.keys(DRIVERS);
+      const idx = keys.indexOf(this._pendingDriver);
+      if (idx < 0) return;
+      if (e.code === "ArrowLeft" || e.code === "ArrowUp") {
+        e.preventDefault();
+        this._showDriverDetail(keys[(idx - 1 + keys.length) % keys.length]);
+      } else if (e.code === "ArrowRight" || e.code === "ArrowDown") {
+        e.preventDefault();
+        this._showDriverDetail(keys[(idx + 1) % keys.length]);
+      } else if (e.code === "Enter") {
+        e.preventDefault();
+        this._confirmDriver();
+      }
+    });
+
+    this._rebuildMainMenuNavButtons();
+
+    window.addEventListener("keydown", (e) => {
+      if (!this._isMainMenuActive()) return;
+      if (e.code === "ArrowUp" || e.code === "ArrowLeft") {
+        e.preventDefault();
+        this._menuIdx = (this._menuIdx - 1 + this._menuBtns.length) % this._menuBtns.length;
+        this._updateMenuFocus();
+      } else if (e.code === "ArrowDown" || e.code === "ArrowRight") {
+        e.preventDefault();
+        this._menuIdx = (this._menuIdx + 1) % this._menuBtns.length;
+        this._updateMenuFocus();
+      } else if (e.code === "Enter") {
+        e.preventDefault();
+        this._menuBtns[this._menuIdx]?.click();
+      }
+    });
+
+    on("btn-next-lc", () => this.onRestart && this.onRestart());
+    on("btn-menu-lc", () => this.onMenu && this.onMenu());
+    on("btn-save-score-lc", () => this.onSaveScoreLc && this.onSaveScoreLc());
+    on("btn-choose-level-lc", () => this._openLevelSelect("level_complete"));
+    const lcNameInput = document.getElementById("lc-name-input");
+    if (lcNameInput) {
+      lcNameInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          if (this.onSaveScoreLc) this.onSaveScoreLc();
+        }
+      });
+    }
+
+    on("btn-choose-level-pause", () => this._openLevelSelect("running"));
+    on("btn-choose-level-menu", () => this._openLevelSelect("main_menu"));
+    on("btn-choose-level-go", () => this._openLevelSelect("game_over"));
+    on("btn-level-back", () => this._closeLevelSelect());
+
+    document.querySelectorAll(".level-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        const id = card.dataset.level;
+        if (id && this.onLevelSelect) {
+          this.onLevelSelect(id, this._levelSelectReturnTo);
+        }
+        this.showLevelSelect(false);
+      });
+    });
+  }
+
+  setHandlers(h) {
+    this.onStart = h.onStart;
+    this.onResume = h.onResume;
+    this.onRestart = h.onRestart;
+    this.onMenu = h.onMenu;
+    this.onSaveScore = h.onSaveScore;
+    this.onRecoveryYes = h.onRecoveryYes;
+    this.onRecoveryNo = h.onRecoveryNo;
+    this.onUnstick = h.onUnstick;
+    this.onBillboardClose = h.onBillboardClose;
+    this.onTouchPause = h.onTouchPause;
+    this.onHudInfoOpen = h.onHudInfoOpen;
+    this.onHudInfoClose = h.onHudInfoClose;
+    this.onMobileSecret = h.onMobileSecret;
+    this.onLevelSelect = h.onLevelSelect;
+    this.onQuizSkip = h.onQuizSkip;
+    this.onDriverSelect = h.onDriverSelect;
+    this.onSaveScoreLc = h.onSaveScoreLc;
+    this.onSkipTutorial = h.onSkipTutorial;
+    this.onTutorialGotIt = h.onTutorialGotIt;
+    this.onAttractScoresHidden = h.onAttractScoresHidden;
+  }
+
+  showMainMenu(visible) {
+    this._shouldShowMainMenu = visible;
+    this.el.mainMenu.classList.toggle("hidden", !visible);
+    if (visible) {
+      this._menuIdx = 0;
+      this._updateMenuFocus();
+    }
+    this._syncSummitDockVisibility();
+  }
+
+  _openTutorial() {
+    if (this._summitLinkLevelId === "DS") return;
+    if (!this.el.tutorialOverlay || !this.el.mainMenu) return;
+    this.el.mainMenu.classList.add("hidden");
+    this.el.tutorialOverlay.classList.remove("hidden");
+    this.el.tutorialOverlay.setAttribute("aria-hidden", "false");
+    this._syncSummitDockVisibility();
+    const startBtn = document.getElementById("btn-tutorial-start");
+    if (startBtn) startBtn.focus();
+  }
+
+  _closeTutorialToMenu() {
+    if (!this.el.tutorialOverlay || !this.el.mainMenu) return;
+    this.el.tutorialOverlay.classList.add("hidden");
+    this.el.tutorialOverlay.setAttribute("aria-hidden", "true");
+    this.el.mainMenu.classList.remove("hidden");
+    this._menuIdx = 0;
+    this._updateMenuFocus();
+    const start = document.getElementById("btn-start");
+    if (start) start.focus();
+    this._syncSummitDockVisibility();
+  }
+
+  _startFromTutorial() {
+    if (!this.el.tutorialOverlay) return;
+    this.el.tutorialOverlay.classList.add("hidden");
+    this.el.tutorialOverlay.setAttribute("aria-hidden", "true");
+  }
+
+  // ─── Interactive tutorial tips ───
+
+  showTutorialBanner() {
+    if (this.el.tutorialBanner) {
+      this.el.tutorialBanner.classList.remove("hidden");
+      this._bannerTimer = setTimeout(() => this.hideTutorialBanner(), 3500);
+    }
+  }
+
+  hideTutorialBanner() {
+    clearTimeout(this._bannerTimer);
+    if (this.el.tutorialBanner) this.el.tutorialBanner.classList.add("hidden");
+  }
+
+  showSkipTutorial(visible) {
+    if (this.el.skipTutorialBtn) this.el.skipTutorialBtn.classList.toggle("visible", visible);
+  }
+
+  showTutorialTip(screenX, screenY, text, { autoDismiss = true } = {}) {
+    const tip = this.el.tutorialTip;
+    if (!tip) return;
+    this.el.tutorialTipText.textContent = text;
+    tip.classList.remove("hidden");
+    tip.setAttribute("aria-hidden", "false");
+    tip.style.left = `${screenX}px`;
+    tip.style.top = `${screenY}px`;
+    tip.style.transform = "translate(-50%, -100%)";
+
+    clearTimeout(this._tipAutoTimer);
+    const fill = document.getElementById("tutorial-tip-countdown-fill");
+    if (fill) {
+      fill.classList.remove("running");
+      void fill.offsetWidth;
+      if (autoDismiss) {
+        fill.classList.add("running");
+        fill.parentElement.style.display = "";
+      } else {
+        fill.parentElement.style.display = "none";
+      }
+    }
+    if (autoDismiss) {
+      this._tipAutoTimer = setTimeout(() => {
+        if (this.onTutorialGotIt) this.onTutorialGotIt();
+      }, 3000);
+    }
+  }
+
+  hideTutorialTip() {
+    const tip = this.el.tutorialTip;
+    if (!tip) return;
+    tip.classList.add("hidden");
+    tip.setAttribute("aria-hidden", "true");
+    clearTimeout(this._tipAutoTimer);
+    const fill = document.getElementById("tutorial-tip-countdown-fill");
+    if (fill) fill.classList.remove("running");
+  }
+
+  showTutorialBillboardNudge(message) {
+    const wrap = this.el.tutorialBbNudge;
+    if (!wrap) return;
+    if (this.el.tutorialBbNudgeText && message) {
+      this.el.tutorialBbNudgeText.textContent = message;
+    }
+    wrap.classList.remove("hidden");
+    wrap.setAttribute("aria-hidden", "false");
+  }
+
+  /** @param {{ x: number, y: number }} pos */
+  updateTutorialBillboardNudge(pos) {
+    const ptr = this.el.tutorialBbNudgePointer;
+    const wrap = this.el.tutorialBbNudge;
+    if (!ptr || !wrap || wrap.classList.contains("hidden")) return;
+    ptr.style.left = `${pos.x}px`;
+    ptr.style.top = `${pos.y}px`;
+  }
+
+  hideTutorialBillboardNudge() {
+    const wrap = this.el.tutorialBbNudge;
+    if (!wrap) return;
+    wrap.classList.add("hidden");
+    wrap.setAttribute("aria-hidden", "true");
+  }
+
+  showBillboardExitHint() {
+    if (!this.el.billboardExitHint) return;
+    this.el.billboardExitHint.classList.remove("hidden");
+  }
+
+  buildTutorialChecklist(steps) {
+    this._tutorialSteps = steps;
+    const ul = this.el.tutorialChecklistItems;
+    if (!ul) return;
+    ul.innerHTML = "";
+    if (this._mobile) {
+      this._renderMobileTutorialStep(0);
+      return;
+    }
+    steps.forEach((step, i) => {
+      const li = document.createElement("li");
+      li.className = "tutorial-checklist-item" + (i === 0 ? " active" : "");
+      li.dataset.step = i;
+      li.innerHTML = `<span class="check-box"></span><span class="check-label">${step.label}</span>`;
+      ul.appendChild(li);
+    });
+  }
+
+  _renderMobileTutorialStep(stepIndex) {
+    const ul = this.el.tutorialChecklistItems;
+    if (!ul || !this._tutorialSteps) return;
+    const total = this._tutorialSteps.length;
+    const done = stepIndex >= total;
+    const label = done ? "Tutorial complete!" : this._tutorialSteps[stepIndex].label;
+    const num = done ? total : stepIndex + 1;
+    ul.innerHTML =
+      `<li class="tutorial-checklist-item active"><span class="check-box"></span><span class="check-label">${label}</span></li>` +
+      `<div class="tutorial-progress">${num} / ${total}</div>`;
+  }
+
+  showTutorialChecklist(visible) {
+    const cl = this.el.tutorialChecklist;
+    if (!cl) return;
+    cl.classList.toggle("hidden", !visible);
+    const left = this.el.hud?.querySelector(".hud-left");
+    if (left) left.classList.toggle("hidden", visible);
+  }
+
+  tutorialCheckStep(stepIndex, totalSteps) {
+    if (this._mobile) {
+      this._renderMobileTutorialStep(stepIndex);
+      return;
+    }
+    const ul = this.el.tutorialChecklistItems;
+    if (!ul) return;
+    const items = ul.querySelectorAll(".tutorial-checklist-item");
+    items.forEach((li, i) => {
+      li.classList.remove("active", "just-completed");
+      if (i < stepIndex) {
+        li.classList.add("done");
+      } else if (i === stepIndex) {
+        li.classList.add("active");
+      }
+    });
+    if (stepIndex > 0) {
+      const prev = items[stepIndex - 1];
+      if (prev) {
+        prev.classList.add("just-completed");
+      }
+    }
+    if (stepIndex >= totalSteps) {
+      items.forEach(li => {
+        li.classList.add("done");
+        li.classList.remove("active");
+      });
+      const last = items[items.length - 1];
+      if (last) last.classList.add("just-completed");
+    }
+  }
+
+  showTutorialCountdown(onDone) {
+    const el = this.el.tutorialCountdown;
+    const num = this.el.tutorialCountdownNum;
+    if (!el || !num) { onDone(); return; }
+
+    el.classList.remove("hidden");
+    el.setAttribute("aria-hidden", "false");
+
+    const sequence = ["3", "2", "1", "GO!"];
+    let i = 0;
+
+    const tick = () => {
+      if (i >= sequence.length) {
+        el.classList.add("hidden");
+        el.setAttribute("aria-hidden", "true");
+        onDone();
+        return;
+      }
+      num.textContent = sequence[i];
+      num.className = "tutorial-countdown-num" + (sequence[i] === "GO!" ? " go" : "");
+      void num.offsetWidth;
+      num.style.animation = "none";
+      void num.offsetWidth;
+      num.style.animation = "";
+      i++;
+      setTimeout(tick, sequence[i - 1] === "GO!" ? 900 : 1000);
+    };
+    tick();
+  }
+
+  hideAllTutorialUI() {
+    this.hideTutorialBanner();
+    this.hideTutorialTip();
+    this.hideTutorialBillboardNudge();
+    this.showSkipTutorial(false);
+    this.showTutorialChecklist(false);
+    if (this.el.tutorialCountdown) this.el.tutorialCountdown.classList.add("hidden");
+    const left = this.el.hud?.querySelector(".hud-left");
+    if (left) left.classList.remove("hidden");
+  }
+
+  /**
+   * Bottom-center Summit booth button: same “menu” state as keyboard nav (_isMainMenuActive).
+   */
+  _syncSummitDockVisibility() {
+    const dock = document.getElementById("summit-booth-back-wrap");
+    if (!dock) return;
+    const show = this._isMainMenuActive();
+    const isDs = this._summitLinkLevelId === "DS";
+    dock.classList.toggle("hidden", !show || isDs);
+  }
+
+  _isMainMenuActive() {
+    if (!this.el.mainMenu) return false;
+    const lb = document.getElementById("menu-leaderboard");
+    return !this.el.mainMenu.classList.contains("hidden")
+      && (!this.el.driverSelect || this.el.driverSelect.classList.contains("hidden"))
+      && (!this.el.levelSelect || this.el.levelSelect.classList.contains("hidden"))
+      && (!lb || lb.classList.contains("hidden"))
+      && (!this.el.menuAchievements || this.el.menuAchievements.classList.contains("hidden"));
+  }
+
+  /** Default main menu (not sub-panels / attract scores) — billboards use this for hit-testing. */
+  isMainMenuBaseVisible() {
+    return this._isMainMenuActive();
+  }
+
+  _updateMenuFocus() {
+    for (const btn of this._menuBtns) btn.classList.remove("menu-focus");
+    if (this._menuBtns[this._menuIdx]) {
+      this._menuBtns[this._menuIdx].classList.add("menu-focus");
+    }
+  }
+
+  async showAttractScores(visible) {
+    if (!this.el.attractScores) return;
+    if (visible && !this._attractClickBound) {
+      this._attractClickBound = true;
+      this.el.attractScores.addEventListener("click", () => {
+        this.showAttractScores(false);
+      });
+    }
+    if (visible) {
+      const list = this.el.attractScoresList;
+      list.innerHTML = '<div style="color:var(--muted);text-align:center;padding:1rem">Loading…</div>';
+      this.el.mainMenu.classList.add("hidden");
+      this.el.attractScores.classList.remove("hidden");
+
+      let board = await fetchGlobalLeaderboard(10).catch(() => []);
+      if (board.length === 0) board = getLeaderboard().slice(0, 10);
+
+      list.innerHTML = "";
+      if (board.length === 0) {
+        list.innerHTML = '<div style="color:var(--muted);text-align:center;padding:1rem">No scores yet — be the first!</div>';
+      } else {
+        board.forEach((entry, i) => {
+          const row = document.createElement("div");
+          row.className = "attract-score-row";
+          row.style.animationDelay = `${i * 0.08}s`;
+          const flag = this._countryFlag(entry.country);
+          const lvl = this._levelLabel(entry.level);
+          row.innerHTML = `<span class="rank">${i + 1}.</span>${flag ? `<span class="flag">${flag}</span>` : ""}<span class="name">${entry.name}</span>${lvl ? `<span class="level">${lvl}</span>` : ""}<span class="pts">${Math.floor(entry.score).toLocaleString()}</span>`;
+          list.appendChild(row);
+        });
+      }
+    } else {
+      this.el.attractScores.classList.add("hidden");
+      if (this._shouldShowMainMenu) this.el.mainMenu.classList.remove("hidden");
+      if (this.onAttractScoresHidden) this.onAttractScoresHidden();
+    }
+    this._syncSummitDockVisibility();
+  }
+
+  showPause(visible) {
+    this.el.pauseMenu.classList.toggle("hidden", !visible);
+  }
+
+  showGameOver(visible) {
+    this.el.gameOver.classList.toggle("hidden", !visible);
+  }
+
+  showQuiz(visible) {
+    this.el.quiz.classList.toggle("hidden", !visible);
+    if (!visible) {
+      this.resetQuizOverlay();
+      this.stopQuizCountdown();
+    }
+  }
+
+  resetQuizOverlay() {
+    const q = this.el.quizQuestionPanel;
+    const r = this.el.quizResultPanel;
+    if (q) q.classList.remove("hidden");
+    if (r) {
+      r.classList.add("hidden");
+      r.classList.remove("is-correct", "is-wrong");
+    }
+  }
+
+  startQuizCountdown(onExpire) {
+    this.stopQuizCountdown();
+    let remaining = 10;
+    const cd = this.el.quizCountdown;
+    if (cd) {
+      cd.textContent = String(remaining);
+      cd.classList.remove("urgent");
+    }
+    this._quizCountdownId = setInterval(() => {
+      remaining--;
+      if (cd) {
+        cd.textContent = String(Math.max(0, remaining));
+        cd.classList.toggle("urgent", remaining <= 3);
+      }
+      if (remaining <= 0) {
+        this.stopQuizCountdown();
+        if (onExpire) onExpire();
+      }
+    }, 1000);
+  }
+
+  stopQuizCountdown() {
+    clearInterval(this._quizCountdownId);
+    this._quizCountdownId = null;
+    if (this.el.quizCountdown) {
+      this.el.quizCountdown.classList.remove("urgent");
+    }
+  }
+
+  showDamagePopup(amount) {
+    const el = this.el.damagePopup;
+    if (!el) return;
+    el.classList.remove("show");
+    el.textContent = `−${amount}`;
+    void el.offsetWidth;
+    el.classList.add("show");
+    setTimeout(() => el.classList.remove("show"), 1500);
+  }
+
+  showPickupPopup(text) {
+    const el = this.el.pickupPopup;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.classList.remove("show");
+      el.textContent = text;
+      void el.offsetWidth;
+      el.classList.add("show");
+      setTimeout(() => el.classList.remove("show"), 1700);
+    });
+  }
+
+  showHippoAnnounce() {
+    const el = this.el.hippoAnnounce;
+    if (!el) return;
+    el.classList.remove("show", "crush");
+    el.innerHTML = "🦛 HIPPO MODE<br>ENGAGED 🦛";
+    void el.offsetWidth;
+    el.classList.add("show");
+    setTimeout(() => el.classList.remove("show"), 3000);
+  }
+
+  showHippoCrush(text) {
+    const el = this.el.hippoAnnounce;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.classList.remove("show", "crush");
+      el.innerHTML = text;
+      void el.offsetWidth;
+      el.classList.add("crush");
+      clearTimeout(this._hippoCrushTimer);
+      this._hippoCrushTimer = setTimeout(() => el.classList.remove("crush"), 4000);
+    });
+  }
+
+  showCombo(count) {
+    const el = this.el.comboDisplay;
+    if (!el) return;
+    if (count < 2) {
+      el.textContent = "";
+      el.classList.remove("active");
+      el.classList.add("hidden");
+      el.setAttribute("aria-hidden", "true");
+      return;
+    }
+    el.textContent = `COMBO x${count}`;
+    el.classList.remove("hidden");
+    void el.offsetWidth;
+    el.classList.add("active");
+    el.setAttribute("aria-hidden", "false");
+  }
+
+  showAchievement(name, desc) {
+    const el = this.el.achievementPopup;
+    if (!el) return;
+    el.classList.remove("hidden", "show");
+    el.innerHTML = `<div class="ach-title">Achievement Unlocked</div><div class="ach-name">${name}</div><div class="ach-desc">${desc}</div>`;
+    void el.offsetWidth;
+    el.classList.add("show");
+    clearTimeout(this._achTimer);
+    this._achTimer = setTimeout(() => {
+      el.classList.remove("show");
+      el.classList.add("hidden");
+    }, 4000);
+  }
+
+  showAchievementsMenu(defs, unlocked) {
+    const grid = this.el.achievementsGrid;
+    const panel = this.el.menuAchievements;
+    if (!grid || !panel) return;
+    grid.innerHTML = "";
+    for (const d of defs) {
+      const isUnlocked = !!unlocked[d.id];
+      const card = document.createElement("div");
+      card.className = `ach-card ${isUnlocked ? "unlocked" : "locked"}`;
+      card.innerHTML = `<div class="ach-card-name">${isUnlocked ? d.name : "???"}</div><div class="ach-card-desc">${d.desc}</div>`;
+      grid.appendChild(card);
+    }
+    panel.classList.remove("hidden");
+  }
+
+  /**
+   * @param {boolean} correct
+   * @param {string} title
+   * @param {string[]} lines
+   * @param {string} [explanation]
+   */
+  showQuizResult(correct, title, lines, explanation) {
+    if (this.el.quizQuestionPanel) {
+      this.el.quizQuestionPanel.classList.add("hidden");
+    }
+    const r = this.el.quizResultPanel;
+    if (!r) return;
+    r.classList.remove("hidden");
+    r.classList.toggle("is-correct", correct);
+    r.classList.toggle("is-wrong", !correct);
+
+    if (this.el.quizResultTitle) {
+      this.el.quizResultTitle.textContent = title;
+    }
+    if (this.el.quizResultLines) {
+      this.el.quizResultLines.innerHTML = "";
+      for (const line of lines) {
+        const li = document.createElement("li");
+        li.textContent = line;
+        if (line.startsWith("Correct answer:")) {
+          li.classList.add("correct-answer-reveal");
+        }
+        this.el.quizResultLines.appendChild(li);
+      }
+    }
+    if (this.el.quizResultExplain) {
+      const ex = explanation || "";
+      this.el.quizResultExplain.textContent = ex;
+      this.el.quizResultExplain.style.display = ex ? "block" : "none";
+    }
+
+    void r.offsetWidth;
+  }
+
+  startResultCountdown(seconds) {
+    this.stopResultCountdown();
+    const el = this.el.quizResultTimer;
+    const cd = this.el.quizResultCountdown;
+    if (!el || !cd) return;
+    let remaining = seconds;
+    cd.textContent = String(remaining);
+    el.classList.remove("hidden");
+    this._resultCountdownId = setInterval(() => {
+      remaining--;
+      if (remaining <= 0) {
+        this.stopResultCountdown();
+        return;
+      }
+      cd.textContent = String(remaining);
+    }, 1000);
+  }
+
+  stopResultCountdown() {
+    clearInterval(this._resultCountdownId);
+    this._resultCountdownId = null;
+    if (this.el.quizResultTimer) {
+      this.el.quizResultTimer.classList.add("hidden");
+    }
+  }
+
+  /**
+   * @param {boolean} visible
+   * @param {boolean} [showFirstTimeTip]
+   * @param {function} [onAutoNo] — called when the 5-second countdown expires
+   */
+  showRecovery(visible, showFirstTimeTip = false, onAutoNo = null) {
+    this.stopRecoveryCountdown();
+    this.el.recovery.classList.toggle("hidden", !visible);
+    if (this.el.recoveryFirstTip) {
+      this.el.recoveryFirstTip.classList.toggle(
+        "hidden",
+        !visible || !showFirstTimeTip
+      );
+    }
+    if (this.el.recoveryNo) {
+      this.el.recoveryNo.classList.remove("auto-selected");
+    }
+
+    if (visible) {
+      this._startRecoveryCountdown(onAutoNo);
+    }
+  }
+
+  _startRecoveryCountdown(onAutoNo) {
+    const cd = this.el.recoveryCountdown;
+    if (!cd) return;
+    let remaining = 10;
+    cd.textContent = String(remaining);
+    cd.classList.remove("hidden", "urgent");
+
+    this._recoveryCountdownId = setInterval(() => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        this._autoSelectNo(onAutoNo);
+        return;
+      }
+      cd.textContent = String(remaining);
+      if (remaining <= 3) {
+        cd.classList.add("urgent");
+      }
+    }, 1000);
+  }
+
+  _autoSelectNo(onAutoNo) {
+    this.stopRecoveryCountdown();
+    const cd = this.el.recoveryCountdown;
+    if (cd) {
+      cd.textContent = "0";
+      cd.classList.add("urgent");
+    }
+    const noBtn = this.el.recoveryNo;
+    if (noBtn) {
+      noBtn.classList.add("auto-selected");
+    }
+    this._recoveryAutoTimer = setTimeout(() => {
+      if (noBtn) noBtn.classList.remove("auto-selected");
+      if (onAutoNo) onAutoNo();
+    }, 900);
+  }
+
+  stopRecoveryCountdown() {
+    clearInterval(this._recoveryCountdownId);
+    this._recoveryCountdownId = null;
+    clearTimeout(this._recoveryAutoTimer);
+    this._recoveryAutoTimer = null;
+    const cd = this.el.recoveryCountdown;
+    if (cd) cd.classList.remove("urgent");
+  }
+
+  showHud(visible) {
+    this.el.hud.classList.toggle("hidden", !visible);
+    if (!visible) this.closeMobileHud();
+  }
+
+  openMobileHud() {
+    const left = this.el.hud?.querySelector(".hud-left");
+    if (left) left.classList.add("mobile-open");
+    document.body.classList.add("hud-info-open");
+  }
+
+  closeMobileHud() {
+    const left = this.el.hud?.querySelector(".hud-left");
+    if (left) left.classList.remove("mobile-open");
+    document.body.classList.remove("hud-info-open");
+  }
+
+  async updateMenuBest(localBest) {
+    if (!this.el.bestScoreMenu) return;
+    this.el.bestScoreMenu.textContent = String(Math.floor(localBest));
+    try {
+      const board = await fetchGlobalLeaderboard(1);
+      const globalBest = board.length > 0 ? board[0].score : 0;
+      const best = Math.max(localBest, globalBest);
+      this.el.bestScoreMenu.textContent = String(Math.floor(best));
+    } catch { /* keep local value */ }
+  }
+
+  updateHud(data) {
+    const {
+      health,
+      score,
+      speed,
+      streak,
+      shield,
+      automationFlow,
+      boostRemaining,
+      boostTotal,
+      playbooks,
+      playbookPts,
+      collections,
+      collectionPts,
+    } = data;
+    if (this.el.health) {
+      const hp = Math.max(0, Math.floor(health));
+      this.el.health.textContent = `${hp}`;
+      const row = this.el.health.parentElement;
+      if (row) row.classList.toggle("danger", hp <= 25 && hp > 0);
+    }
+    if (this.el.score) this.el.score.textContent = `${Math.floor(score)}`;
+    if (this.el.speed)
+      this.el.speed.textContent = `${speed.toFixed(1)}`;
+    if (this.el.streak) this.el.streak.textContent = `${streak}`;
+    for (let i = 0; i < 3; i++) {
+      const pip = document.getElementById(`flow-pip-${i}`);
+      if (pip) {
+        const filled = i < streak;
+        pip.classList.toggle("filled", filled && !automationFlow);
+        pip.classList.toggle("all-filled", automationFlow);
+      }
+    }
+    if (this.el.playbookCount)
+      this.el.playbookCount.textContent = `${playbooks || 0}`;
+    const es = data.isScaloneta;
+    if (this.el.playbookPts)
+      this.el.playbookPts.textContent = `${playbookPts || 0} ${es ? "pts" : "pts"}`;
+    if (this.el.collectionCount)
+      this.el.collectionCount.textContent = `${collections || 0}`;
+    if (this.el.collectionPts)
+      this.el.collectionPts.textContent = `${collectionPts || 0} ${es ? "pts" : "pts"}`;
+    if (this.el.shield) {
+      this.el.shield.textContent = shield
+        ? (es ? "Escudo: SÍ" : "Shield: ON")
+        : (es ? "Escudo: —" : "Shield: —");
+      this.el.shield.classList.toggle("active", !!shield);
+    }
+    if (this.el.flow) {
+      this.el.flow.textContent = automationFlow
+        ? (es ? "⚡ Flujo activo — 1.2× puntos" : "⚡ Flow active — 1.2× score")
+        : (es ? "Flujo: —" : "Flow: —");
+      this.el.flow.classList.toggle("active", !!automationFlow);
+    }
+    if (this.el.boostBar && this.el.boostFill) {
+      const active = boostTotal > 0 && boostRemaining > 0;
+      this.el.boostBar.classList.toggle("hidden", !active);
+      if (active) {
+        const t = boostRemaining / boostTotal;
+        this.el.boostFill.style.transform = `scaleX(${Math.max(0, Math.min(1, t))})`;
+      }
+    }
+
+    if (this.el.ttBar && this.el.ttFill && data.ttCooldown !== undefined) {
+      const cd = data.ttCooldown;
+      const max = data.ttCooldownMax || 15;
+      const isDelorean = data.isDelorean;
+      const cooling = cd > 0;
+      const ready = isDelorean && !cooling && !data.ttActive;
+      this.el.ttBar.classList.toggle("hidden", !isDelorean);
+      this.el.ttBar.classList.toggle("ready", ready);
+      if (cooling) {
+        this.el.ttFill.style.transform = `scaleX(${Math.max(0, 1 - cd / max)})`;
+      } else if (ready) {
+        this.el.ttFill.style.transform = "scaleX(1)";
+      }
+    }
+
+    if (this.el.remIcons && data.maxRemediations != null) {
+      const used = data.remediationsUsed || 0;
+      const max = data.maxRemediations;
+      let html = "";
+      for (let i = 0; i < max; i++) {
+        const cls = i < max - used ? "rem-pip available" : "rem-pip spent";
+        html += `<span class="${cls}">+</span>`;
+      }
+      this.el.remIcons.innerHTML = html;
+    }
+
+    if (this.el.manualBoost && this.el.mbFill) {
+      const { mbState, mbProgress } = data;
+      this.el.manualBoost.classList.remove("ready", "active", "cooldown");
+      this.el.manualBoost.classList.add(mbState || "ready");
+      this.el.mbFill.style.transform = `scaleX(${Math.max(0, Math.min(1, mbProgress ?? 1))})`;
+    }
+    if (this.el.brakeVignette) {
+      this.el.brakeVignette.classList.toggle("active", !!data.braking);
+    }
+    if (data.finishProgress != null && this.el.finishFill) {
+      const p = Math.max(0, Math.min(1, data.finishProgress));
+      this.el.finishFill.style.transform = `scaleX(${p})`;
+    }
+    if (data.finishTimeLeft != null && this.el.finishTime) {
+      const secs = Math.max(0, Math.ceil(data.finishTimeLeft));
+      const m = Math.floor(secs / 60);
+      const s = secs % 60;
+      this.el.finishTime.textContent = `${m}:${String(s).padStart(2, "0")}`;
+    }
+  }
+
+  setStatus(text, ms = 2200) {
+    if (!this.el.status) return;
+    this.el.status.textContent = text;
+    clearTimeout(this._statusTimer);
+    this._statusTimer = setTimeout(() => {
+      this.el.status.textContent = "";
+    }, ms);
+  }
+
+  renderQuizQuestion(q) {
+    this.resetQuizOverlay();
+    if (!this.el.quizPrompt || !this.el.quizOpts) return;
+    this.el.quizPrompt.textContent = q.prompt ?? q.question ?? "";
+    this.el.quizOpts.innerHTML = "";
+    q.options.forEach((opt, i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "quiz-opt";
+      b.textContent = `${i + 1}. ${opt}`;
+      b.dataset.index = String(i);
+      this.el.quizOpts.appendChild(b);
+    });
+  }
+
+  flashDamage() {
+    if (!this.el.flash) return;
+    this.el.flash.classList.remove("flash-hit");
+    void this.el.flash.offsetWidth;
+    this.el.flash.classList.add("flash-hit");
+    setTimeout(() => this.el.flash.classList.remove("flash-hit"), 120);
+  }
+
+  setGameOverStats(stats) {
+    if (this.el.goScore) this.el.goScore.textContent = String(Math.floor(stats.score));
+    if (this.el.goHits) this.el.goHits.textContent = String(stats.hits);
+    if (this.el.goPickups) this.el.goPickups.textContent = String(stats.pickups);
+    if (this.el.goCorrect) this.el.goCorrect.textContent = String(stats.correct);
+  }
+
+  /**
+   * Reset game over screen to entry mode (name input visible, leaderboard hidden).
+   * @param {object} [options]
+   * @param {boolean} [options.hideNameEntry] — Death Star / no-leaderboard runs: hide name, country, Save.
+   */
+  resetGameOver(lastName, lastCountry, options = {}) {
+    const hideNameEntry = options.hideNameEntry === true;
+    if (this.el.goEntry) this.el.goEntry.classList.remove("hidden");
+    if (this.el.goLeaderboard) this.el.goLeaderboard.classList.add("hidden");
+    if (this.el.goRankBanner) this.el.goRankBanner.classList.add("hidden");
+    if (this.el.goEntry) {
+      const label = this.el.goEntry.querySelector(".go-name-label");
+      const row = this.el.goEntry.querySelector(".go-name-row");
+      if (label) label.classList.toggle("hidden", hideNameEntry);
+      if (row) row.classList.toggle("hidden", hideNameEntry);
+    }
+    if (this.el.goNameInput) {
+      this.el.goNameInput.value = lastName || "";
+      if (!hideNameEntry) {
+        setTimeout(() => this.el.goNameInput.focus(), 80);
+      }
+    }
+    if (this.el.goCountry) {
+      this.el.goCountry.value = lastCountry || "US";
+    }
+  }
+
+  getEnteredName() {
+    return this.el.goNameInput ? this.el.goNameInput.value.trim() : "";
+  }
+
+  getSelectedCountry() {
+    return this.el.goCountry ? this.el.goCountry.value : "US";
+  }
+
+  /** Switch from entry to leaderboard view and render the table. */
+  async showLeaderboard(board, highlightRank, playerName, playerScore) {
+    if (this.el.goEntry) this.el.goEntry.classList.add("hidden");
+    const lb = this.el.goLeaderboard;
+    if (lb) lb.classList.remove("hidden");
+
+    const body = this.el.lbBody;
+    if (!body) return;
+
+    this._renderBoardInto(body, board);
+
+    const global = await fetchGlobalLeaderboard(50);
+    if (global.length > 0) {
+      const globalRank = this._findPlayerRank(global, playerName, playerScore);
+      this._renderBoardInto(body, global, globalRank);
+      this._showRankBanner(this.el.goRankBanner, globalRank, global.length);
+      if (this.el.lbScroll && globalRank >= 0) {
+        const rows = body.querySelectorAll("tr");
+        if (rows[globalRank]) {
+          setTimeout(() => rows[globalRank].scrollIntoView({ block: "center" }), 100);
+        }
+      }
+    } else {
+      this._renderBoardInto(body, board, highlightRank);
+      this._showRankBanner(this.el.goRankBanner, highlightRank, board.length);
+    }
+  }
+
+  showLevelComplete(visible) {
+    if (this.el.levelComplete) this.el.levelComplete.classList.toggle("hidden", !visible);
+  }
+
+  setLevelCompleteStats(stats, isCheater = false, cheaterType = null) {
+    if (this.el.lcScore) this.el.lcScore.textContent = String(Math.floor(stats.score));
+    if (this.el.lcHits) this.el.lcHits.textContent = String(stats.hits);
+    if (this.el.lcPickups) this.el.lcPickups.textContent = String(stats.pickups);
+    if (this.el.lcCorrect) this.el.lcCorrect.textContent = String(stats.correct);
+    if (isCheater) {
+      if (cheaterType === "deathstar") {
+        if (this.el.lcTitle) this.el.lcTitle.textContent = "Trench run complete";
+        if (this.el.lcMessage) this.el.lcMessage.textContent =
+          "The Force was with you — but trench runs stay off the leaderboard. Use the automation, Luke.";
+      } else if (cheaterType === "hippo") {
+        if (this.el.lcTitle) this.el.lcTitle.textContent = "🦛 Hippo Mode Complete!";
+        if (this.el.lcMessage) this.el.lcMessage.textContent =
+          "Sorry, hippo mode can't be on the leaderboard. Stop cheating!";
+      } else if (cheaterType === "scaloneta") {
+        if (this.el.lcTitle) this.el.lcTitle.textContent = "🇦🇷 ¡La Scaloneta llegó! 🇦🇷";
+        if (this.el.lcMessage) this.el.lcMessage.textContent =
+          "¡Campeones del mundo no necesitan leaderboard! Pero qué lindo paseo, papá.";
+      } else if (cheaterType === "f16") {
+        if (this.el.lcTitle) this.el.lcTitle.textContent = "✈️ Mission Complete, Maverick ✈️";
+        if (this.el.lcMessage) this.el.lcMessage.textContent =
+          "You feel the need... the need for speed. But fighter jets can't be on the leaderboard.";
+      } else if (cheaterType === "trex") {
+        if (this.el.lcTitle) this.el.lcTitle.textContent = "🦖 Extinction-Level Finish! 🦖";
+        if (this.el.lcMessage) this.el.lcMessage.textContent =
+          "Life found a way... but T-Rex arms can't reach the leaderboard. Those tiny arms!";
+      } else if (cheaterType === "cadillac") {
+        if (this.el.lcTitle) this.el.lcTitle.textContent = "🌟 And The Oscar Goes To... 🌟";
+        if (this.el.lcMessage) this.el.lcMessage.textContent =
+          "Darling, you were fabulous! But Hollywood stars don't need leaderboards — they have fans.";
+      } else if (cheaterType === "ogre") {
+        if (this.el.lcTitle) this.el.lcTitle.textContent = "🧌 The Quest Is Complete! 🧌";
+        if (this.el.lcMessage) this.el.lcMessage.textContent =
+          "The ogre has conquered the kingdom! But ogres don't do leaderboards — they do swamps.";
+      } else if (cheaterType === "crooner") {
+        if (this.el.lcTitle) this.el.lcTitle.textContent = "🎤 It's Simply Too Good! 🎤";
+        if (this.el.lcMessage) this.el.lcMessage.textContent =
+          "You're driving with the Driving Crooner, baby! But I gotta figure out how to make money on this — not leaderboards.";
+      } else if (cheaterType === "timetrain") {
+        if (this.el.lcTitle) this.el.lcTitle.textContent = "🚂 Great Scott! 🚂";
+        if (this.el.lcMessage) this.el.lcMessage.textContent =
+          "You made it to the future! But where we're going, we don't need leaderboards.";
+      } else if (cheaterType === "bicycle") {
+        if (this.el.lcTitle) this.el.lcTitle.textContent = "🚲 Go Leafs Go! 🚲";
+        if (this.el.lcMessage) this.el.lcMessage.textContent =
+          "Hicham pedaled his way to victory! The Architect of Clouds conquers on two wheels. No leaderboard though, eh?";
+      } else {
+        if (this.el.lcTitle) this.el.lcTitle.textContent = "Nice Finish... Cheater";
+        if (this.el.lcMessage) this.el.lcMessage.textContent =
+          "Playing as Andrius is basically cheating. Pick a real driver and try again — if you dare.";
+      }
+      if (this.el.lcEntry) this.el.lcEntry.classList.add("hidden");
+    } else {
+      if (this.el.lcTitle) this.el.lcTitle.textContent = "Level Complete!";
+      const bonus = stats.finishBonus || 0;
+      if (this.el.lcMessage) this.el.lcMessage.textContent =
+        bonus > 0 ? `Finish bonus: +${bonus.toLocaleString()} points!` : "";
+      if (this.el.lcEntry) this.el.lcEntry.classList.remove("hidden");
+    }
+  }
+
+  resetLevelComplete(lastName, lastCountry) {
+    if (this.el.lcEntry) this.el.lcEntry.classList.remove("hidden");
+    if (this.el.lcLeaderboard) this.el.lcLeaderboard.classList.add("hidden");
+    if (this.el.lcRankBanner) this.el.lcRankBanner.classList.add("hidden");
+    if (this.el.lcNameInput) {
+      this.el.lcNameInput.value = lastName || "";
+      setTimeout(() => this.el.lcNameInput.focus(), 80);
+    }
+    if (this.el.lcCountry) {
+      this.el.lcCountry.value = lastCountry || "US";
+    }
+  }
+
+  getLcEnteredName() {
+    return this.el.lcNameInput ? this.el.lcNameInput.value.trim() : "";
+  }
+
+  getLcSelectedCountry() {
+    return this.el.lcCountry ? this.el.lcCountry.value : "US";
+  }
+
+  async showLcLeaderboard(board, highlightRank, playerName, playerScore) {
+    if (this.el.lcEntry) this.el.lcEntry.classList.add("hidden");
+    const lb = this.el.lcLeaderboard;
+    if (lb) lb.classList.remove("hidden");
+
+    const body = this.el.lcLbBody;
+    if (!body) return;
+
+    this._renderBoardInto(body, board);
+
+    const global = await fetchGlobalLeaderboard(50);
+    if (global.length > 0) {
+      const globalRank = this._findPlayerRank(global, playerName, playerScore);
+      this._renderBoardInto(body, global, globalRank);
+      this._showRankBanner(this.el.lcRankBanner, globalRank, global.length);
+      if (this.el.lcLbScroll && globalRank >= 0) {
+        const rows = body.querySelectorAll("tr");
+        if (rows[globalRank]) {
+          setTimeout(() => rows[globalRank].scrollIntoView({ block: "center" }), 100);
+        }
+      }
+    } else {
+      this._renderBoardInto(body, board, highlightRank);
+      this._showRankBanner(this.el.lcRankBanner, highlightRank, board.length);
+    }
+  }
+
+  preloadBillboardEmbeds(billboards) {
+    if (this._preloadedIframes) {
+      for (const iframe of Object.values(this._preloadedIframes)) {
+        iframe.remove();
+      }
+    }
+    this._preloadedIframes = {};
+    if (!billboards) return;
+    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+    if (isMobile) return;
+
+    for (const bb of billboards) {
+      if (!bb.embed) continue;
+      const iframe = document.createElement("iframe");
+      iframe.title = bb.embedTitle || bb.label || "";
+      iframe.allow = "clipboard-write";
+      iframe.allowFullscreen = true;
+      iframe.src = bb.embed;
+      iframe.style.cssText = "position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;border:none;";
+      document.body.appendChild(iframe);
+      this._preloadedIframes[bb.embed] = iframe;
+    }
+  }
+
+  showBillboard(visible, { label = "", embed = null, embedTitle = "", logo = null, showBonus = false } = {}) {
+    if (visible) {
+      if (this.el.status) this.el.status.textContent = "";
+      if (this.el.damagePopup) this.el.damagePopup.classList.remove("show");
+      if (this.el.pickupPopup) this.el.pickupPopup.classList.remove("show");
+      if (this.el.hippoAnnounce) this.el.hippoAnnounce.classList.remove("show", "crush");
+      if (this.el.comboDisplay) this.el.comboDisplay.classList.remove("show");
+      clearTimeout(this._statusTimer);
+    }
+    if (this.el.billboardOverlay) {
+      this.el.billboardOverlay.classList.toggle("hidden", !visible);
+    }
+    if (this.el.billboardExitHint && !visible) {
+      this.el.billboardExitHint.classList.add("hidden");
+    }
+    if (this.el.billboardLabel && label) {
+      this.el.billboardLabel.textContent = label;
+    }
+    if (this.el.billboardBonus) {
+      this.el.billboardBonus.classList.toggle("hidden", !showBonus);
+    }
+
+    if (!this.el.billboardContent) return;
+
+    if (!visible) {
+      const iframe = this.el.billboardContent.querySelector("iframe");
+      if (iframe && iframe._preloadedSrc && this._preloadedIframes) {
+        iframe.style.cssText = "position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;border:none;";
+        document.body.appendChild(iframe);
+      }
+      this.el.billboardContent.innerHTML = "";
+      return;
+    }
+
+    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+    if (embed && isMobile) {
+      window.open(embed, "_blank");
+      const logoHtml = logo
+        ? `<img class="billboard-placeholder-logo" src="${logo}" alt="${label}" />`
+        : `<div class="billboard-placeholder-icon">&#9881;</div>`;
+      this.el.billboardContent.innerHTML =
+        `<div class="billboard-placeholder">` +
+        logoHtml +
+        `<h3>${label}</h3>` +
+        `<p>Demo opened in a new tab.</p>` +
+        `<p class="billboard-placeholder-hint">Close this panel to resume the game.</p>` +
+        `</div>`;
+    } else if (embed) {
+      const preloaded = this._preloadedIframes && this._preloadedIframes[embed];
+      if (preloaded) {
+        preloaded.style.cssText = "";
+        preloaded._preloadedSrc = embed;
+        this.el.billboardContent.innerHTML = "";
+        this.el.billboardContent.appendChild(preloaded);
+      } else {
+        this.el.billboardContent.innerHTML =
+          `<div class="billboard-loading"><div class="billboard-loading-spinner"></div><p>Loading demo...</p></div>`;
+        requestAnimationFrame(() => {
+          const iframe = document.createElement("iframe");
+          iframe.title = embedTitle || label;
+          iframe.allow = "clipboard-write";
+          iframe.allowFullscreen = true;
+          iframe.onload = () => {
+            const spinner = this.el.billboardContent.querySelector(".billboard-loading");
+            if (spinner) spinner.remove();
+          };
+          iframe.src = embed;
+          this.el.billboardContent.appendChild(iframe);
+        });
+      }
+    } else {
+      const logoHtml = logo
+        ? `<img class="billboard-placeholder-logo" src="${logo}" alt="${label}" />`
+        : `<div class="billboard-placeholder-icon">&#9881;</div>`;
+      this.el.billboardContent.innerHTML =
+        `<div class="billboard-placeholder">` +
+        logoHtml +
+        `<h3>${label}</h3>` +
+        `<p>Interactive demo coming soon.</p>` +
+        `<p class="billboard-placeholder-hint">Check back — this side quest is being built.</p>` +
+        `</div>`;
+    }
+  }
+
+  shake() {
+    if (!this.el.canvasWrap) return;
+    this.el.canvasWrap.classList.remove("shake");
+    void this.el.canvasWrap.offsetWidth;
+    this.el.canvasWrap.classList.add("shake");
+  }
+
+  _countryFlag(code) {
+    if (!code || code.length !== 2) return "";
+    return String.fromCodePoint(
+      ...[...code.toUpperCase()].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65)
+    );
+  }
+
+  _levelLabel(id) {
+    const lvl = LEVELS[id];
+    return lvl ? lvl.name : "";
+  }
+
+  _renderBoardInto(body, board, highlightIdx = -1) {
+    body.innerHTML = "";
+    if (board.length === 0) {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 5;
+      td.textContent = "No scores yet — play a round!";
+      td.style.textAlign = "center";
+      td.style.color = "var(--muted)";
+      td.style.padding = "1.5rem 0.5rem";
+      tr.appendChild(td);
+      body.appendChild(tr);
+    } else {
+      board.forEach((entry, i) => {
+        const tr = document.createElement("tr");
+        if (i === highlightIdx) tr.classList.add("lb-current");
+        const tdRank = document.createElement("td");
+        tdRank.textContent = String(i + 1);
+        const tdFlag = document.createElement("td");
+        tdFlag.className = "lb-flag";
+        tdFlag.textContent = this._countryFlag(entry.country);
+        const tdName = document.createElement("td");
+        tdName.textContent = entry.name || "???";
+        const tdLevel = document.createElement("td");
+        tdLevel.className = "lb-level";
+        tdLevel.textContent = this._levelLabel(entry.level);
+        const tdScore = document.createElement("td");
+        tdScore.textContent = String(Math.floor(entry.score));
+        tr.append(tdRank, tdFlag, tdName, tdLevel, tdScore);
+        body.appendChild(tr);
+      });
+    }
+  }
+
+  _findPlayerRank(board, name, score) {
+    if (!name) return -1;
+    const normName = name.trim().toLowerCase();
+    const normScore = Math.floor(score);
+    return board.findIndex(
+      (e) => e.name.trim().toLowerCase() === normName && Math.floor(e.score) === normScore
+    );
+  }
+
+  _ordinal(n) {
+    const s = ["th", "st", "nd", "rd"];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
+  _showRankBanner(banner, rank, boardSize) {
+    if (!banner) return;
+    if (rank < 0) {
+      banner.className = "rank-banner outside";
+      banner.textContent = `Your score didn't make the top ${boardSize} — keep racing!`;
+      banner.classList.remove("hidden");
+      return;
+    }
+    const place = this._ordinal(rank + 1);
+    const inTop50 = rank < 50;
+    banner.className = `rank-banner ${inTop50 ? "top50" : "outside"}`;
+    banner.textContent = inTop50
+      ? `${place} Place!`
+      : `${place} Place`;
+    banner.classList.remove("hidden");
+  }
+
+  async _fetchBoard() {
+    const global = await fetchGlobalLeaderboard(50);
+    return global.length > 0 ? global : getLeaderboard();
+  }
+
+  async _showMenuLeaderboard() {
+    const lb = document.getElementById("menu-leaderboard");
+    if (!lb) return;
+    lb.classList.remove("hidden");
+    this._toggleMenuButtons(false);
+    const body = document.getElementById("menu-lb-body");
+    if (!body) return;
+    body.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:1rem">Loading…</td></tr>';
+    const board = await this._fetchBoard();
+    this._renderBoardInto(body, board);
+  }
+
+  _hideMenuLeaderboard() {
+    const lb = document.getElementById("menu-leaderboard");
+    if (lb) lb.classList.add("hidden");
+    this._toggleMenuButtons(true);
+  }
+
+  _showMenuAchievements() {
+    this.showAchievementsMenu(ACHIEVEMENT_DEFS, loadAchievements());
+    this._toggleMenuButtons(false);
+  }
+
+  _hideMenuAchievements() {
+    if (this.el.menuAchievements) {
+      this.el.menuAchievements.classList.add("hidden");
+    }
+    this._toggleMenuButtons(true);
+  }
+
+  // --- Credits ---
+
+  _creditsCache = null;
+
+  async _showMenuCredits() {
+    const panel = document.getElementById("menu-credits");
+    if (!panel) return;
+    panel.classList.remove("hidden");
+    this._toggleMenuButtons(false);
+    if (!this._creditsCache) {
+      await this._fetchCredits();
+    }
+  }
+
+  _hideMenuCredits() {
+    const panel = document.getElementById("menu-credits");
+    if (panel) panel.classList.add("hidden");
+    this._toggleMenuButtons(true);
+  }
+
+  async _fetchCredits() {
+    const container = document.getElementById("credits-content");
+    if (!container) return;
+    container.innerHTML = '<p style="text-align:center;color:var(--muted);padding:1rem">Loading\u2026</p>';
+
+    const REPO = "abwalczyk/ansible-f1";
+    const API = "https://api.github.com";
+
+    try {
+      const [repoRes, contribRes] = await Promise.all([
+        fetch(`${API}/repos/${REPO}`),
+        fetch(`${API}/repos/${REPO}/contributors?per_page=30`),
+      ]);
+
+      if (!repoRes.ok || !contribRes.ok) throw new Error("GitHub API error");
+
+      const repo = await repoRes.json();
+      const contributors = await contribRes.json();
+      this._creditsCache = { repo, contributors };
+
+      const totalCommits = contributors.reduce((s, c) => s + c.contributions, 0);
+      const created = new Date(repo.created_at).toLocaleDateString("en-US", {
+        year: "numeric", month: "long",
+      });
+
+      let html = "";
+
+      html += '<div class="credits-oss-blurb">';
+      html += "<p><strong>Built to Automate</strong> is an open-source arcade game built with Three.js.</p>";
+      html += "<p>Fork it, improve it, and submit a PR!</p>";
+      html += `<a href="https://github.com/${REPO}" target="_blank" rel="noopener" class="credits-gh-link">`;
+      html += '<span class="credits-gh-icon">&#9733;</span> View on GitHub</a>';
+      html += "</div>";
+
+      html += '<div class="credits-stats">';
+      html += `<div class="credits-stat"><span class="credits-stat-num">${totalCommits}</span><span class="credits-stat-label">Commits</span></div>`;
+      html += `<div class="credits-stat"><span class="credits-stat-num">${repo.stargazers_count}</span><span class="credits-stat-label">Stars</span></div>`;
+      html += `<div class="credits-stat"><span class="credits-stat-num">${repo.forks_count}</span><span class="credits-stat-label">Forks</span></div>`;
+      html += `<div class="credits-stat"><span class="credits-stat-num">${contributors.length}</span><span class="credits-stat-label">Contributors</span></div>`;
+      if (created) {
+        html += `<div class="credits-stat"><span class="credits-stat-num">${created}</span><span class="credits-stat-label">Created</span></div>`;
+      }
+      html += "</div>";
+
+      html += '<h4 class="credits-section-title">Contributors</h4>';
+      html += '<div class="credits-contributors">';
+      for (const c of contributors) {
+        html += '<a class="credits-contributor" href="' + c.html_url + '" target="_blank" rel="noopener">';
+        html += '<img class="credits-avatar" src="' + c.avatar_url + '&s=80" alt="" loading="lazy" />';
+        html += '<span class="credits-name">' + (c.login || "unknown") + "</span>";
+        html += '<span class="credits-commits">' + c.contributions + " commits</span>";
+        html += "</a>";
+      }
+      html += "</div>";
+
+      container.innerHTML = html;
+    } catch (err) {
+      container.innerHTML =
+        '<p style="text-align:center;color:var(--muted);padding:1rem">Could not load credits. ' +
+        '<a href="https://github.com/' + REPO + '" target="_blank" rel="noopener" ' +
+        'style="color:var(--neon)">Visit on GitHub</a></p>';
+    }
+  }
+
+  /**
+   * Escape from submenus (same as clicking Back): one step at a time, before Game pause handling.
+   * @returns {boolean} true if this keypress was consumed
+   */
+  _menuEscapeBack() {
+    if (this.el.levelSelect &&
+        !this.el.levelSelect.classList.contains("hidden")) {
+      this._closeLevelSelect();
+      return true;
+    }
+
+    if (this.isDriverSelectVisible()) {
+      if (this.el.driverDetail &&
+          !this.el.driverDetail.classList.contains("hidden")) {
+        this.el.driverDetail.classList.add("hidden");
+        if (this.el.driverCards) this.el.driverCards.classList.remove("compact");
+        this._stopCarPreview();
+        return true;
+      }
+      this._closeDriverSelect();
+      return true;
+    }
+
+    const menuLb = document.getElementById("menu-leaderboard");
+    if (menuLb && !menuLb.classList.contains("hidden")) {
+      this._hideMenuLeaderboard();
+      return true;
+    }
+
+    if (this.el.menuAchievements &&
+        !this.el.menuAchievements.classList.contains("hidden")) {
+      this._hideMenuAchievements();
+      return true;
+    }
+
+    const menuCredits = document.getElementById("menu-credits");
+    if (menuCredits && !menuCredits.classList.contains("hidden")) {
+      this._hideMenuCredits();
+      return true;
+    }
+
+    if (this.el.attractScores &&
+        !this.el.attractScores.classList.contains("hidden")) {
+      this.showAttractScores(false);
+      return true;
+    }
+
+    if (this.el.godzillaScore &&
+        !this.el.godzillaScore.classList.contains("hidden")) {
+      this.hideGodzillaScore();
+      if (this.onMenu) this.onMenu();
+      return true;
+    }
+
+    return false;
+  }
+
+  _openDriverSelect(returnTo) {
+    if (!this.el.driverSelect) return;
+    this._driverSelectReturnTo = returnTo;
+    if (returnTo === "running") {
+      if (this.el.pauseMenu) this.el.pauseMenu.classList.add("hidden");
+    } else {
+      this.el.mainMenu.classList.add("hidden");
+      this.el.attractScores.classList.add("hidden");
+    }
+    this.el.driverSelect.classList.remove("hidden");
+    this.el.driverDetail.classList.add("hidden");
+    this.el.driverCards.classList.remove("compact");
+    this._renderDriverCards();
+    this._syncSummitDockVisibility();
+  }
+
+  _closeDriverSelect() {
+    this._stopCarPreview();
+    if (this.el.driverSelect) this.el.driverSelect.classList.add("hidden");
+    if (this._driverSelectReturnTo === "running") {
+      if (this.el.pauseMenu) this.el.pauseMenu.classList.remove("hidden");
+    } else {
+      this.el.mainMenu.classList.remove("hidden");
+    }
+    this._syncSummitDockVisibility();
+  }
+
+  _carLabel(carType) {
+    if (carType === "truck") return "Pickup Truck";
+    if (carType === "lightcycle") return "Lightcycle";
+    if (carType === "delorean") return "DeLorean";
+    if (carType === "semi_truck") return "18-Wheeler";
+    if (carType === "bicycle") return "Bicycle";
+    return "F1 Racer";
+  }
+
+  _renderDriverCards() {
+    const container = this.el.driverCards;
+    if (!container) return;
+    container.innerHTML = "";
+    for (const d of Object.values(DRIVERS)) {
+      const flag = d.country ? this._countryFlag(d.country) : "";
+      const card = document.createElement("div");
+      card.className = "driver-card" + (d.id === this._selectedDriver ? " active" : "");
+      card.innerHTML = `
+        <img class="driver-card-photo" src="${d.photo}" alt="${d.name}" />
+        <p class="driver-card-name">${flag ? `<span class="driver-card-flag">${flag}</span> ` : ""}${d.name}</p>
+        <p class="driver-card-origin">${d.origin}</p>
+        <span class="driver-card-tag">${this._carLabel(d.car)}</span>
+      `;
+      card.addEventListener("click", () => this._showDriverDetail(d.id));
+      container.appendChild(card);
+    }
+  }
+
+  _showDriverDetail(driverId) {
+    const d = DRIVERS[driverId];
+    if (!d) return;
+    this._pendingDriver = driverId;
+    this.el.driverDetail.classList.remove("hidden");
+    this.el.driverDetailPhoto.src = d.photo;
+    this.el.driverDetailPhoto.alt = d.name;
+    const flag = d.country ? this._countryFlag(d.country) : "";
+    this.el.driverDetailName.textContent = `${flag} ${d.name}`;
+    this.el.driverDetailOrigin.textContent = d.origin;
+    this.el.driverDetailBio.textContent = d.bio;
+
+    this.el.driverCards.classList.add("compact");
+    this.el.driverCards.querySelectorAll(".driver-card").forEach((c) => c.classList.remove("active"));
+    const cards = this.el.driverCards.children;
+    const keys = Object.keys(DRIVERS);
+    const idx = keys.indexOf(driverId);
+    if (idx >= 0 && cards[idx]) cards[idx].classList.add("active");
+
+    this._startCarPreview(d.car);
+  }
+
+  _startCarPreview(carType) {
+    this._stopCarPreview();
+
+    const container = document.getElementById("driver-car-preview");
+    if (!container) return;
+
+    const w = 200, h = 200;
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(w, h);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.innerHTML = "";
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(35, w / h, 0.1, 50);
+    camera.position.set(3.5, 2.5, 3.5);
+    camera.lookAt(0, 0.3, 0);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const dir = new THREE.DirectionalLight(0xffffff, 1.0);
+    dir.position.set(4, 6, 3);
+    scene.add(dir);
+    const fill = new THREE.DirectionalLight(0x8888ff, 0.3);
+    fill.position.set(-3, 2, -2);
+    scene.add(fill);
+
+    const tempPlayer = new Player(scene, carType);
+    const car = tempPlayer.mesh;
+    car.position.set(0, 0, 0);
+
+    const pivot = new THREE.Group();
+    pivot.add(car);
+    scene.add(pivot);
+
+    let running = true;
+    const animate = () => {
+      if (!running) return;
+      requestAnimationFrame(animate);
+      pivot.rotation.y += 0.008;
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    this._carPreview = { renderer, scene, tempPlayer, pivot, running: true, stop() {
+      running = false;
+      tempPlayer.dispose();
+      renderer.dispose();
+      container.innerHTML = "";
+    }};
+  }
+
+  _stopCarPreview() {
+    if (this._carPreview) {
+      this._carPreview.stop();
+      this._carPreview = null;
+    }
+  }
+
+  _confirmDriver() {
+    if (!this._pendingDriver) return;
+    this._selectedDriver = this._pendingDriver;
+    if (this.onDriverSelect) this.onDriverSelect(this._selectedDriver);
+    this._closeDriverSelect();
+  }
+
+  showDriverSelect(visible) {
+    if (!visible) this._stopCarPreview();
+    if (this.el.driverSelect) {
+      this.el.driverSelect.classList.toggle("hidden", !visible);
+    }
+  }
+
+  isDriverSelectVisible() {
+    return this.el.driverSelect && !this.el.driverSelect.classList.contains("hidden");
+  }
+
+  setActiveDriver(id) {
+    this._selectedDriver = id;
+  }
+
+  _toggleMenuButtons(visible) {
+    const ids = [
+      "btn-start",
+      "btn-choose-level-menu",
+      "btn-choose-driver",
+      "btn-highscores",
+      "btn-achievements",
+      "btn-credits",
+    ];
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle("hidden", !visible);
+    }
+    this._syncSummitDockVisibility();
+  }
+
+  // --- Level select ---
+
+  showLevelSelect(visible) {
+    if (this.el.levelSelect) {
+      this.el.levelSelect.classList.toggle("hidden", !visible);
+    }
+  }
+
+  setScalonetaHud(on) {
+    this._scaloniHud = on;
+    const _swap = (sel, en, es) => {
+      const el = document.querySelector(sel);
+      if (el) el.textContent = on ? es : en;
+    };
+    const _swapHTML = (sel, en, es) => {
+      const el = document.querySelector(sel);
+      if (el) el.innerHTML = on ? es : en;
+    };
+    _swap(".hud-health-row", "", "");
+    const hr = document.querySelector(".hud-health-row");
+    if (hr) {
+      const span = hr.querySelector("#hud-health");
+      const val = span ? span.textContent : "100";
+      hr.innerHTML = on
+        ? `Salud <span id="hud-health">${val}</span>`
+        : `Health <span id="hud-health">${val}</span>`;
+      this.el.health = document.getElementById("hud-health");
+    }
+    const scoreDiv = this.el.score?.parentElement;
+    if (scoreDiv) {
+      const val = this.el.score.textContent;
+      scoreDiv.innerHTML = on
+        ? `Puntos <span id="hud-score">${val}</span>`
+        : `Score <span id="hud-score">${val}</span>`;
+      this.el.score = document.getElementById("hud-score");
+    }
+    const speedDiv = this.el.speed?.parentElement;
+    if (speedDiv && !speedDiv.classList.contains("hud-flow-progress")) {
+      const val = this.el.speed.textContent;
+      speedDiv.innerHTML = on
+        ? `Velocidad <span id="hud-speed">${val}</span>`
+        : `Speed <span id="hud-speed">${val}</span>`;
+      this.el.speed = document.getElementById("hud-speed");
+    }
+    const flowDiv = document.querySelector(".hud-flow-progress");
+    if (flowDiv) {
+      const sVal = this.el.streak ? this.el.streak.textContent : "0";
+      flowDiv.innerHTML = on
+        ? `Flujo <span id="hud-streak">${sVal}</span> / 3<div class="flow-pips"><span class="flow-pip" id="flow-pip-0"></span><span class="flow-pip" id="flow-pip-1"></span><span class="flow-pip" id="flow-pip-2"></span></div>`
+        : `Flow <span id="hud-streak">${sVal}</span> / 3<div class="flow-pips"><span class="flow-pip" id="flow-pip-0"></span><span class="flow-pip" id="flow-pip-1"></span><span class="flow-pip" id="flow-pip-2"></span></div>`;
+      this.el.streak = document.getElementById("hud-streak");
+    }
+    const pbLabel = document.querySelectorAll(".hud-pickup-counter");
+    if (pbLabel[0]) {
+      const v = document.getElementById("hud-playbooks")?.textContent || "0";
+      const p = document.getElementById("hud-playbook-pts")?.textContent || "0 pts";
+      pbLabel[0].innerHTML = `Playbooks <span id="hud-playbooks">${v}</span><span class="hud-pickup-pts" id="hud-playbook-pts">${p}</span>`;
+    }
+    if (pbLabel[1]) {
+      const v = document.getElementById("hud-collections")?.textContent || "0";
+      const p = document.getElementById("hud-collection-pts")?.textContent || "0 pts";
+      pbLabel[1].innerHTML = on
+        ? `Colecciones <span id="hud-collections">${v}</span><span class="hud-pickup-pts" id="hud-collection-pts">${p}</span>`
+        : `Collections <span id="hud-collections">${v}</span><span class="hud-pickup-pts" id="hud-collection-pts">${p}</span>`;
+    }
+    this.el.playbookCount = document.getElementById("hud-playbooks");
+    this.el.playbookPts = document.getElementById("hud-playbook-pts");
+    this.el.collectionCount = document.getElementById("hud-collections");
+    this.el.collectionPts = document.getElementById("hud-collection-pts");
+
+    _swap(".legend-title", "Field guide", "Guía de campo");
+    _swap(".rem-label", "Fixes", "Reparaciones");
+    _swap(".mb-label", "Boost [W/\u2191]", "Turbo [W/\u2191]");
+    _swap(".finish-label", "\uD83C\uDFC1 Finish", "\uD83C\uDFC1 Meta");
+    const boostLabel = document.querySelector("#boost-bar > span");
+    if (boostLabel) boostLabel.textContent = on ? "Turbo" : "Boost";
+    const ttLabel = document.querySelector("#tt-cooldown-bar > span");
+    if (ttLabel) ttLabel.textContent = on ? "⚡ Capacitor de flujo" : "⚡ Flux Capacitor";
+
+    _swap("#quiz-title", "Skill Check", "Prueba de habilidad");
+    const pauseTitle = document.querySelector("#pause-menu h2");
+    if (pauseTitle) pauseTitle.textContent = on ? "Pausado" : "Paused";
+    _swap("#btn-resume", "Resume", "Continuar");
+    _swap("#btn-restart", "Restart Run", "Reiniciar");
+    _swap("#btn-pause-levels", "Choose Level", "Elegir nivel");
+    _swap("#btn-quit", "Main Menu", "Menú principal");
+    const escHint = document.querySelector("#pause-menu p.hint");
+    if (escHint) {
+      escHint.textContent = on ? "Esc o Retroceso para continuar" : "Esc or Backspace to resume";
+    }
+
+    const goTitle = document.querySelector("#game-over h2");
+    if (goTitle) goTitle.textContent = on ? "Fin del juego" : "Game Over";
+    document.querySelectorAll("#game-over .btn-play-again").forEach(b => {
+      if (b.textContent.trim() === "Play Again" || b.textContent.trim() === "Jugar de nuevo")
+        b.textContent = on ? "Jugar de nuevo" : "Play Again";
+    });
+    document.querySelectorAll("#game-over .btn-back-menu, #level-complete .btn-back-menu").forEach(b => {
+      if (b.textContent.trim() === "Back to Menu" || b.textContent.trim() === "Volver al menú")
+        b.textContent = on ? "Volver al menú" : "Back to Menu";
+    });
+
+    const statHint = document.querySelector(".hud-stat-hint");
+    if (statHint) statHint.textContent = on
+      ? "Tu medidor de carrera — los cortes lo bajan. En 0, fin del juego."
+      : "Your run meter \u2014 outages drain it. At 0, game over.";
+
+    const legendMap = [
+      ["Outage", "hazard \u00b7 dodge it", "Corte", "peligro \u00b7 esquivalo"],
+      ["Rival car", "dodge or crash", "Auto rival", "esquivá o chocá"],
+      ["Playbook", "+100 score", "Playbook", "+100 puntos"],
+      ["Collection", "+150 score", "Colecci\u00f3n", "+150 puntos"],
+      ["Shield", "blocks next hit", "Escudo", "bloquea el pr\u00f3ximo golpe"],
+      ["Boost token", "quiz for speed", "Token de turbo", "prueba de velocidad"],
+    ];
+    const rows = document.querySelectorAll(".legend-row:not(.legend-flow-row):not(.quiz-toggle-row)");
+    legendMap.forEach((entry, i) => {
+      if (!rows[i]) return;
+      const sp = rows[i].querySelector("span:last-child");
+      if (sp) sp.innerHTML = on
+        ? `<strong>${entry[2]}</strong> \u2014 ${entry[3]}`
+        : `<strong>${entry[0]}</strong> \u2014 ${entry[1]}`;
+    });
+    const flowLegend = document.querySelector(".legend-flow-row span:last-child");
+    if (flowLegend) flowLegend.innerHTML = on
+      ? "<strong>Flujo de automatizaci\u00f3n</strong> \u2014 3 respuestas correctas seguidas activa 8s de 1.2\u00d7 puntos + im\u00e1n"
+      : "<strong>Automation Flow</strong> \u2014 3 correct answers in a row triggers 8s of 1.2\u00d7 score + pickup magnet";
+    const quizLabel = document.querySelector(".quiz-toggle-row span");
+    if (quizLabel) quizLabel.textContent = on ? "Modo prueba" : "Quiz Mode";
+
+    const recoveryTitle = document.querySelector("#recovery-overlay h3");
+    if (recoveryTitle) recoveryTitle.textContent = on ? "\u00bf Intentar remediaci\u00f3n?" : "Attempt remediation?";
+    const recoveryHint = document.querySelector("#recovery-overlay .hint");
+    if (recoveryHint) recoveryHint.textContent = on ? "Respond\u00e9 una prueba para recuperar salud." : "Answer a skill check to recover health.";
+    _swap("#recovery-yes", "Yes", "S\u00ed");
+    _swap("#recovery-no", "No", "No");
+    const quizHint = document.querySelector("#quiz-overlay .hint");
+    if (quizHint) quizHint.textContent = on ? "Teclas 1\u20134 o clic \u00b7 Esc para saltar" : "Keys 1\u20134 or click \u00b7 Esc to skip";
+    _swap("#btn-quiz-skip", "Skip", "Saltar");
+    const timerHint = document.querySelector("#quiz-result-timer");
+    if (timerHint) {
+      const cd = document.getElementById("quiz-result-countdown");
+      const v = cd ? cd.textContent : "";
+      timerHint.innerHTML = on
+        ? `<span id="quiz-result-countdown">${v}</span>s \u2014 Esc para continuar`
+        : `<span id="quiz-result-countdown">${v}</span>s \u2014 Esc to continue`;
+    }
+
+    const goStats = document.querySelectorAll("#game-over .go-stats-row > span");
+    const lcStats = document.querySelectorAll("#level-complete .go-stats-row > span");
+    const statLabels = [
+      ["Obstacles", "Obst\u00e1culos"],
+      ["Pickups", "Recolectados"],
+      ["Correct", "Correctas"],
+    ];
+    [goStats, lcStats].forEach(nodeList => {
+      statLabels.forEach((pair, i) => {
+        if (!nodeList[i]) return;
+        const inner = nodeList[i].querySelector("span");
+        if (!inner) return;
+        const val = inner.textContent;
+        nodeList[i].innerHTML = `${on ? pair[1] : pair[0]} <span id="${inner.id}">${val}</span>`;
+      });
+    });
+    const goScoreLabel = document.querySelector("#game-over .go-final-score");
+    if (goScoreLabel) {
+      const v = document.getElementById("go-score")?.textContent || "0";
+      goScoreLabel.innerHTML = on ? `Puntos: <span id="go-score">${v}</span>` : `Score: <span id="go-score">${v}</span>`;
+      this.el.goScore = document.getElementById("go-score");
+    }
+    const lcScoreLabel = document.querySelector("#level-complete .go-final-score");
+    if (lcScoreLabel) {
+      const v = document.getElementById("lc-score")?.textContent || "0";
+      lcScoreLabel.innerHTML = on ? `Puntos: <span id="lc-score">${v}</span>` : `Score: <span id="lc-score">${v}</span>`;
+      this.el.lcScore = document.getElementById("lc-score");
+    }
+    const goNameLabel = document.querySelector("#game-over .go-name-label");
+    if (goNameLabel) goNameLabel.textContent = on ? "Ingres\u00e1 tu nombre" : "Enter your name";
+    const lcNameLabel = document.querySelector("#level-complete .go-name-label");
+    if (lcNameLabel) lcNameLabel.textContent = on ? "Ingres\u00e1 tu nombre" : "Enter your name";
+    _swap("#btn-save-score", "Save", "Guardar");
+    _swap("#btn-save-score-lc", "Save", "Guardar");
+    _swap("#btn-restart-go", "Play Again", "Jugar de nuevo");
+    _swap("#btn-next-lc", "Play Again", "Jugar de nuevo");
+    _swap("#btn-choose-level-go", "Choose Level", "Elegir nivel");
+    _swap("#btn-choose-level-lc", "Choose Level", "Elegir nivel");
+    _swap("#btn-menu-go", "Back to Menu", "Volver al men\u00fa");
+    _swap("#btn-menu-lc", "Back to Menu", "Volver al men\u00fa");
+    this._refreshSummitBoothLink();
+  }
+
+  setActiveLevel(levelId) {
+    document.querySelectorAll(".level-card").forEach((card) => {
+      card.classList.toggle("active", card.dataset.level === levelId);
+    });
+    if (this.el.hudLevelName) {
+      const lvl = LEVELS[levelId];
+      this.el.hudLevelName.textContent = lvl && lvl.name ? lvl.name : `Level ${levelId}`;
+    }
+    this._summitLinkLevelId = levelId;
+    this._refreshSummitBoothLink();
+    this._syncSummitDockVisibility();
+    this._rebuildMainMenuNavButtons();
+  }
+
+  _refreshSummitBoothLink() {
+    const link = document.getElementById("summit-booth-back");
+    const wrap = document.getElementById("summit-booth-back-wrap");
+    const lead = document.getElementById("summit-booth-lead");
+    if (!link || !wrap || !lead) return;
+    const id = this._summitLinkLevelId;
+    if (id === "DS") return;
+    const lvl = LEVELS[id];
+    const url = getSummitBoothThemeUrl(id);
+    if (!url || !lvl) return;
+    link.href = url;
+    lead.textContent = this._scaloniHud
+      ? "Ver este tema en el sitio de Summit booth."
+      : "View this theme on the Summit booth site.";
+    link.textContent = this._scaloniHud
+      ? `Stand Summit — ${lvl.name}`
+      : `Summit booth — ${lvl.name}`;
+  }
+
+  _openLevelSelect(returnTo) {
+    this.syncDeathStarTrenchCardVisibility();
+    this._levelSelectReturnTo = returnTo;
+    this.el.mainMenu.classList.add("hidden");
+    if (this.el.gameOver) this.el.gameOver.classList.add("hidden");
+    if (this.el.pauseMenu) this.el.pauseMenu.classList.add("hidden");
+    if (this.el.levelComplete) this.el.levelComplete.classList.add("hidden");
+    this.showLevelSelect(true);
+    this._syncSummitDockVisibility();
+  }
+
+  _closeLevelSelect() {
+    this.showLevelSelect(false);
+    if (this._levelSelectReturnTo === "main_menu") {
+      this.el.mainMenu.classList.remove("hidden");
+    } else if (this._levelSelectReturnTo === "game_over") {
+      if (this.el.gameOver) this.el.gameOver.classList.remove("hidden");
+    } else if (this._levelSelectReturnTo === "level_complete") {
+      if (this.el.levelComplete) this.el.levelComplete.classList.remove("hidden");
+    } else if (this._levelSelectReturnTo === "running") {
+      if (this.el.pauseMenu) this.el.pauseMenu.classList.remove("hidden");
+    }
+    this._syncSummitDockVisibility();
+  }
+
+  _drawLevelPreviews() {
+    const previews = document.querySelectorAll(".level-card");
+    const themes = [
+      { road: "#121520", edge: "#220044", lane: "#00ffcc", side: "#0a0e18", sky: "#050510", scenery: "city" },
+      { road: "#555960", edge: "#446633", lane: "#ffffff", side: "#2a5520", sky: "#6699bb", scenery: "forest" },
+      { road: "#8b7355", edge: "#c4a84a", lane: "#ffeecc", side: "#d4b85a", sky: "#ccaa77", scenery: "desert" },
+      { road: "#3a3828", edge: "#4a5530", lane: "#88cc66", side: "#2a3a1a", sky: "#556644", scenery: "swamp" },
+      { road: "#445566", edge: "#3388aa", lane: "#ffffff", side: "#2266aa", sky: "#4488bb", scenery: "water" },
+      { road: "#667788", edge: "#8899aa", lane: "#ccddff", side: "#dde8f0", sky: "#aabbcc", scenery: "snow" },
+      { road: "#555555", edge: "#cc8844", lane: "#ffdd44", side: "#8a9a5a", sky: "#6699cc", scenery: "coast" },
+      { road: "#5a5e6a", edge: "#1a1a2e", lane: "#ffcc00", side: "#1a2218", sky: "#182840", scenery: "durham" },
+      { road: "#4a4c54", edge: "#5a5c64", lane: "#9aa0a8", side: "#383a42", sky: "#050508", scenery: "trench" },
+    ];
+
+    const W = 148, H = 100;
+    const midY = Math.round(H * 0.42);
+
+    previews.forEach((card, i) => {
+      const canvas = card.querySelector("canvas");
+      if (!canvas || !themes[i]) return;
+      canvas.width = W; canvas.height = H;
+      const ctx = canvas.getContext("2d");
+      const t = themes[i];
+
+      ctx.fillStyle = t.sky;
+      ctx.fillRect(0, 0, W, midY);
+
+      ctx.fillStyle = t.side;
+      ctx.fillRect(0, midY, W, H - midY);
+
+      const rL = W * 0.28, rR = W * 0.72;
+      const bL = W * 0.36, bR = W * 0.64;
+      ctx.fillStyle = t.road;
+      ctx.beginPath();
+      ctx.moveTo(rL, midY); ctx.lineTo(rR, midY);
+      ctx.lineTo(bR, H); ctx.lineTo(bL, H);
+      ctx.closePath(); ctx.fill();
+
+      ctx.strokeStyle = t.edge; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(rL, midY); ctx.lineTo(bL, H); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(rR, midY); ctx.lineTo(bR, H); ctx.stroke();
+
+      ctx.strokeStyle = t.lane; ctx.lineWidth = 1;
+      ctx.setLineDash([3, 5]);
+      const m1 = rL + (rR - rL) * 0.37, m1b = bL + (bR - bL) * 0.37;
+      const m2 = rL + (rR - rL) * 0.63, m2b = bL + (bR - bL) * 0.63;
+      ctx.beginPath(); ctx.moveTo(m1, midY + 2); ctx.lineTo(m1b, H); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(m2, midY + 2); ctx.lineTo(m2b, H); ctx.stroke();
+      ctx.setLineDash([]);
+
+      this._drawSceneryHints(ctx, t, W, H, midY);
+    });
+  }
+
+  _drawSceneryHints(ctx, t, W, H, midY) {
+    const s = t.scenery;
+    if (s === "city") {
+      ctx.fillStyle = "#2a3048";
+      ctx.fillRect(4, 14, 12, 28); ctx.fillRect(20, 10, 10, 32);
+      ctx.fillRect(W - 30, 8, 14, 34); ctx.fillRect(W - 14, 16, 10, 26);
+      ctx.fillStyle = "#7a8a9a";
+      ctx.fillRect(W - 42, 4, 8, 38);
+      ctx.fillStyle = "#cc0000";
+      ctx.fillRect(W - 41, 4, 6, 3);
+    } else if (s === "forest") {
+      ctx.fillStyle = "#5c3a1a";
+      for (const x of [12, 30, W - 28, W - 12]) ctx.fillRect(x, midY - 16, 2, 16);
+      ctx.fillStyle = "#2d6b30";
+      for (const x of [10, 28, W - 30, W - 14]) { ctx.beginPath(); ctx.arc(x + 3, midY - 18, 6, 0, Math.PI * 2); ctx.fill(); }
+      ctx.fillStyle = "#3a5a4a";
+      ctx.beginPath(); ctx.moveTo(0, midY); ctx.lineTo(24, 6); ctx.lineTo(48, midY); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(W - 48, midY); ctx.lineTo(W - 20, 3); ctx.lineTo(W, midY); ctx.fill();
+    } else if (s === "desert") {
+      ctx.fillStyle = "#3a7a3a";
+      for (const x of [16, W - 20]) { ctx.fillRect(x, midY - 12, 2, 14); ctx.fillRect(x - 3, midY - 7, 2, 5); ctx.fillRect(x + 3, midY - 9, 2, 5); }
+      ctx.fillStyle = "#a08050";
+      ctx.beginPath(); ctx.moveTo(0, midY); ctx.lineTo(28, 10); ctx.lineTo(56, midY); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(W - 56, midY); ctx.lineTo(W - 24, 6); ctx.lineTo(W, midY); ctx.fill();
+    } else if (s === "swamp") {
+      ctx.fillStyle = "#3a2a1a";
+      for (const x of [10, 28, W - 26, W - 10]) { ctx.fillRect(x, midY - 20, 2, 20); ctx.fillRect(x - 2, midY - 14, 2, 6); }
+      ctx.fillStyle = "#3a6630";
+      for (const x of [8, 26, W - 28, W - 12]) { ctx.beginPath(); ctx.arc(x + 3, midY - 22, 5, 0, Math.PI * 2); ctx.fill(); }
+      ctx.fillStyle = "rgba(60,80,50,0.35)";
+      ctx.fillRect(0, midY + 4, W, 8);
+      ctx.fillStyle = "#2a4a30";
+      ctx.beginPath(); ctx.arc(20, midY + 10, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(W - 20, midY + 12, 4, 0, Math.PI * 2); ctx.fill();
+    } else if (s === "snow") {
+      ctx.fillStyle = "#1a4a2a";
+      for (const x of [14, 32, W - 30, W - 14]) {
+        ctx.beginPath(); ctx.moveTo(x, midY); ctx.lineTo(x + 4, midY - 16); ctx.lineTo(x + 8, midY); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(x + 1, midY - 6); ctx.lineTo(x + 4, midY - 20); ctx.lineTo(x + 7, midY - 6); ctx.fill();
+      }
+      ctx.fillStyle = "#eef4ff";
+      for (const x of [14, 32, W - 30, W - 14]) { ctx.beginPath(); ctx.moveTo(x + 2, midY - 14); ctx.lineTo(x + 4, midY - 22); ctx.lineTo(x + 6, midY - 14); ctx.fill(); }
+      ctx.fillStyle = "#6a7a8a";
+      ctx.beginPath(); ctx.moveTo(0, midY); ctx.lineTo(30, 4); ctx.lineTo(60, midY); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(W - 60, midY); ctx.lineTo(W - 22, 2); ctx.lineTo(W, midY); ctx.fill();
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath(); ctx.moveTo(22, 8); ctx.lineTo(30, 2); ctx.lineTo(38, 8); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(W - 38, 6); ctx.lineTo(W - 24, 1); ctx.lineTo(W - 14, 6); ctx.fill();
+    } else if (s === "water") {
+      ctx.fillStyle = "rgba(34,102,170,0.5)";
+      for (let y = midY + 4; y < H; y += 10) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.bezierCurveTo(W * 0.25, y - 3, W * 0.75, y + 3, W, y); ctx.lineTo(W, y + 3); ctx.bezierCurveTo(W * 0.75, y + 6, W * 0.25, y, 0, y + 3); ctx.fill();
+      }
+      ctx.fillStyle = "#ff4422";
+      ctx.beginPath(); ctx.arc(18, midY + 18, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(W - 18, midY + 14, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#ccddee";
+      ctx.globalAlpha = 0.5;
+      ctx.beginPath(); ctx.ellipse(W * 0.3, 14, 16, 5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(W * 0.7, 10, 14, 4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    } else if (s === "coast") {
+      ctx.fillStyle = "#2277aa";
+      ctx.fillRect(0, midY - 6, W * 0.28, midY + 6);
+      ctx.fillStyle = "#888888";
+      ctx.fillRect(W * 0.26, midY - 2, 2, H - midY + 2);
+      ctx.fillStyle = "#6a8a5a";
+      ctx.beginPath(); ctx.moveTo(W - 50, midY); ctx.lineTo(W - 30, 6); ctx.lineTo(W - 10, midY); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(W - 30, midY); ctx.lineTo(W - 14, 12); ctx.lineTo(W, midY); ctx.fill();
+      ctx.fillStyle = "#ccddee";
+      ctx.globalAlpha = 0.4;
+      ctx.beginPath(); ctx.ellipse(W * 0.4, 10, 18, 5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    } else if (s === "durham") {
+      ctx.fillStyle = "#2a3048";
+      ctx.fillRect(4, 16, 10, 26); ctx.fillRect(18, 12, 8, 30);
+      ctx.fillRect(W - 24, 14, 12, 28); ctx.fillRect(W - 10, 18, 8, 24);
+      // Ansible tower
+      ctx.fillStyle = "#4a5a6a";
+      ctx.fillRect(W * 0.42, 4, 10, 38);
+      ctx.fillStyle = "#ee1100";
+      ctx.fillRect(W * 0.43, 2, 8, 3);
+      // Water tower
+      ctx.fillStyle = "#6a6a6a";
+      ctx.fillRect(W * 0.28, 14, 1, 16); ctx.fillRect(W * 0.34, 14, 1, 16);
+      ctx.fillStyle = "#ccccbb";
+      ctx.fillRect(W * 0.26, 8, 12, 7);
+      ctx.fillStyle = "#cc2200";
+      ctx.fillRect(W * 0.27, 10, 10, 2);
+      // Smokestack
+      ctx.fillStyle = "#884422";
+      ctx.fillRect(W - 36, 8, 4, 34);
+      ctx.fillStyle = "rgba(136,136,136,0.3)";
+      ctx.beginPath(); ctx.arc(W - 34, 6, 4, 0, Math.PI * 2); ctx.fill();
+      // Stadium
+      ctx.fillStyle = "#3a4858";
+      ctx.fillRect(W * 0.6, 22, 14, 10);
+      ctx.fillStyle = "#0044aa";
+      ctx.fillRect(W * 0.61, 20, 12, 3);
+    } else if (s === "trench") {
+      ctx.fillStyle = "#3a3a44";
+      ctx.fillRect(2, midY - 8, 5, 36);
+      ctx.fillRect(W - 7, midY - 8, 5, 36);
+      ctx.fillStyle = "#555560";
+      for (let z = 0; z < 4; z++) {
+        ctx.fillRect(8 + z * 6, midY + z * 4, 2, 14);
+        ctx.fillRect(W - 14 - z * 6, midY + z * 4, 2, 14);
+      }
+      ctx.fillStyle = "#2a2a32";
+      ctx.beginPath();
+      ctx.arc(W * 0.5, 10, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ff6622";
+      ctx.beginPath();
+      ctx.arc(W * 0.72, 16, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  hideAll() {
+    this.el.mainMenu.classList.add("hidden");
+    this.el.pauseMenu.classList.add("hidden");
+    this.el.gameOver.classList.add("hidden");
+    this.el.quiz.classList.add("hidden");
+    this.el.hud.classList.add("hidden");
+    this.el.levelSelect.classList.add("hidden");
+    this.el.driverSelect.classList.add("hidden");
+    if (this.el.levelComplete) this.el.levelComplete.classList.add("hidden");
+    if (this.el.billboardOverlay) this.el.billboardOverlay.classList.add("hidden");
+    if (this.el.recovery) this.el.recovery.classList.add("hidden");
+    if (this.el.attractScores) this.el.attractScores.classList.add("hidden");
+    this.closeMobileHud();
+  }
+
+  showGodzillaHud(visible) {
+    if (this.el.godzillaHud) this.el.godzillaHud.classList.toggle("hidden", !visible);
+  }
+
+  updateGodzillaHud(timeLeft, score, crushed) {
+    if (this.el.gzTime) this.el.gzTime.textContent = timeLeft < 0 ? "⚔" : Math.ceil(timeLeft);
+    if (this.el.gzScore) this.el.gzScore.textContent = score;
+    if (this.el.gzCrushed) this.el.gzCrushed.textContent = crushed;
+  }
+
+  showGodzillaScore(score, crushed, total, bossResult) {
+    const pct = total > 0 ? Math.round((crushed / total) * 100) : 0;
+    if (this.el.gzFinalScore) this.el.gzFinalScore.textContent = score;
+    if (this.el.gzFinalCrushed) this.el.gzFinalCrushed.textContent = crushed;
+    if (this.el.gzFinalPct) this.el.gzFinalPct.textContent = pct + "%";
+    const titleEl = this.el.godzillaScore?.querySelector(".gz-score-title");
+    if (titleEl) {
+      if (bossResult === "victory") titleEl.textContent = "🏆 MECHA DEFEATED! 🏆";
+      else if (bossResult === "defeat") titleEl.textContent = "💀 MECHA WINS... 💀";
+      else titleEl.textContent = "🦎 RAMPAGE OVER 🦎";
+    }
+    if (this.el.godzillaScore) this.el.godzillaScore.classList.remove("hidden");
+  }
+
+  hideGodzillaScore() {
+    if (this.el.godzillaScore) this.el.godzillaScore.classList.add("hidden");
+  }
+}
