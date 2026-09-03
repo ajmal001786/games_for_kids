@@ -104,9 +104,9 @@ export function getLeaderboard() {
 /**
  * @returns {{ rank: number, board: Array<{name:string, score:number, ts:number}> }}
  */
-export function addLeaderboardEntry(name, score, country = "US", level = "A") {
+export function addLeaderboardEntry(name, score, country = "US", level = "A", avatar = "") {
   const board = getLeaderboard();
-  const entry = { name, score: Math.floor(score), country, level, ts: Date.now() };
+  const entry = { name, score: Math.floor(score), country, level, avatar, ts: Date.now() };
   board.push(entry);
   board.sort((a, b) => b.score - a.score);
   if (board.length > MAX_LEADERBOARD) board.length = MAX_LEADERBOARD;
@@ -190,7 +190,7 @@ export const ACHIEVEMENT_DEFS = [
   { id: "combo_10", name: "Combo x10", desc: "Reach a 10x pickup combo" },
   { id: "streak_5", name: "Quiz Master", desc: "5 correct quiz answers in a row" },
   { id: "boost_5", name: "Boost Hog", desc: "Use 5 boosts in one run" },
-  { id: "playbooks_20", name: "Bookworm", desc: "Collect 20 playbooks in one run" },
+  { id: "playbooks_20", name: "Star Collector", desc: "Collect 20 stars in one run" },
   { id: "collections_15", name: "Curator", desc: "Collect 15 collections in one run" },
   { id: "survive_60", name: "Endurance", desc: "Survive 60 seconds" },
   { id: "survive_120", name: "Iron Will", desc: "Survive 120 seconds" },

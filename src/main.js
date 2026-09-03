@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { Game } from "./game/Game.js";
 import { UI } from "./game/UI.js";
-import { getLastLevel, getLastDriver, getDeathStarTrenchUnlocked } from "./utils/storage.js";
+import { getLastLevel, getLastDriver } from "./utils/storage.js";
 import { getLevelIdFromPathname, syncThemeUrl } from "./utils/themePath.js";
 import { toggleMusicMute, toggleSfxMute } from "./utils/audio.js";
 import { loadQuestions } from "./data/questions.js";
@@ -78,25 +78,18 @@ ui.setHandlers({
   onSkipTutorial: () => game.skipTutorial(),
   onTutorialGotIt: () => game.tutorialGotIt(),
   onAttractScoresHidden: () => game.notifyAttractScoresDismissed(),
+  onProfileChange: () => game.quiz.refreshPool(),
 });
 
 ui.setActiveDriver(getLastDriver());
 
 const levelFromUrl = getLevelIdFromPathname();
-let initialLevel = levelFromUrl ?? getLastLevel();
-if (!getDeathStarTrenchUnlocked() && initialLevel === "DS") {
-  initialLevel = getLastLevel();
-  if (initialLevel === "DS") initialLevel = "A";
-}
+const initialLevel = levelFromUrl ?? getLastLevel();
 game.switchLevel(initialLevel);
 syncThemeUrl(initialLevel, levelFromUrl ? "skip" : "replace");
 
 window.addEventListener("popstate", () => {
-  let id = getLevelIdFromPathname() ?? getLastLevel();
-  if (!getDeathStarTrenchUnlocked() && id === "DS") {
-    id = getLastLevel();
-    if (id === "DS") id = "A";
-  }
+  const id = getLevelIdFromPathname() ?? getLastLevel();
   game.switchLevel(id);
   syncThemeUrl(id, "skip");
 });

@@ -1,6 +1,7 @@
 import { getQuestions } from "../data/questions.js";
 
-const STORAGE_KEY = "builtToAutomate_askedQuestionIds";
+const STORAGE_KEY = "kidsGame_askedQuestionIds";
+const LEGACY_STORAGE_KEY = "builtToAutomate_askedQuestionIds";
 // Chosen difficulty level, written by the name/age setup screen.
 // Values: "easy" | "medium" | "hard". If unset/null, all questions are used.
 const LEVEL_KEY = "kidsGame_level";
@@ -24,6 +25,13 @@ function loadAskedIds() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return new Set(JSON.parse(raw));
+    // One-time: drop legacy Ansible-era question history.
+    const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (legacy) {
+      try {
+        localStorage.removeItem(LEGACY_STORAGE_KEY);
+      } catch { /* ignore */ }
+    }
   } catch { /* ignore */ }
   return new Set();
 }
@@ -42,6 +50,12 @@ export class QuizSystem {
 
   resetPool() {
     if (this._pool.length > 0) return;
+    this._refillPool();
+  }
+
+  /** Call when the player changes age / quiz difficulty mid-session. */
+  refreshPool() {
+    this._pool = [];
     this._refillPool();
   }
 

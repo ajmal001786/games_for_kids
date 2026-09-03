@@ -1110,6 +1110,63 @@ export class Track {
     }
   }
 
+  _wrapBillboardText(ctx, text, maxWidth) {
+    const words = text.split(/\s+/);
+    const lines = [];
+    let line = "";
+    for (const word of words) {
+      const test = line ? `${line} ${word}` : word;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    return lines.length ? lines : [text];
+  }
+
+  _billboardFontSize(text) {
+    const len = text.length;
+    if (len <= 14) return 108;
+    if (len <= 22) return 92;
+    if (len <= 32) return 78;
+    return 64;
+  }
+
+  _drawBillboardLabel(ctx, def, canvasW, canvasH) {
+    const accentHex = "#" + def.accent.toString(16).padStart(6, "0");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    ctx.fillStyle = accentHex;
+    ctx.fillRect(0, 0, canvasW, 22);
+
+    const label = def.label || "";
+    const maxWidth = canvasW - 100;
+    const fontSize = this._billboardFontSize(label);
+    const fontFamily = '"Trebuchet MS", "Arial Rounded MT Bold", "Helvetica Neue", Arial, sans-serif';
+    ctx.font = `bold ${fontSize}px ${fontFamily}`;
+    ctx.fillStyle = "#1a1a2e";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    const lines = this._wrapBillboardText(ctx, label, maxWidth);
+    const lineHeight = fontSize * 1.18;
+    const textBlockH = lines.length * lineHeight;
+    const startY = (canvasH - textBlockH) / 2 - 28;
+
+    lines.forEach((line, i) => {
+      ctx.fillText(line, canvasW / 2, startY + i * lineHeight + lineHeight / 2);
+    });
+
+    const babaSize = Math.max(42, Math.round(fontSize * 0.58));
+    ctx.font = `bold ${babaSize}px ${fontFamily}`;
+    ctx.fillStyle = "#ee0000";
+    ctx.fillText("Baba <3", canvasW / 2, canvasH - 54);
+  }
+
   _billboards() {
     /** Bigger faces + closer to play (higher Z) = easier to read & click */
     const BB_Z = -65;
@@ -1127,9 +1184,9 @@ export class Track {
       z: BB_Z,
     }));
 
-    /** 16:9 face matches interactive demo thumbnails; world scale is ~+15% for readability */
-    const boardW = 11.2;
-    const boardH = 6.3;
+    /** 16:9 face — scaled up for kid-readable signs */
+    const boardW = 12.5;
+    const boardH = 7.0;
     const poleH = 7;
     const canvasW = 1280;
     const canvasH = 720;
@@ -1216,10 +1273,7 @@ export class Track {
           w *= scale; h *= scale;
           ctx.drawImage(logoImg, canvasW / 2 - w / 2, canvasH / 2 - h / 2, w, h);
         } else {
-          ctx.textAlign = "center";
-          ctx.font = "bold 72px 'Courier New', monospace";
-          ctx.fillStyle = "#1a1a2e";
-          ctx.fillText(def.label.toUpperCase(), canvasW / 2, canvasH / 2 + 22);
+          this._drawBillboardLabel(ctx, def, canvasW, canvasH);
         }
 
         tex.needsUpdate = true;
@@ -1427,6 +1481,7 @@ export class Track {
       { x: -15, w: 7, h: 18, d: 6, color: 0x303650 },
       { x: -5, w: 9, h: 14, d: 7, color: 0x2c3248 },
       { x: 5, w: 8, h: 10, d: 6, color: 0x262c40 },
+      { x: 22, w: 14, h: 26, d: 10, color: 0x3a4558 },
       { x: 38, w: 11, h: 11, d: 8, color: 0x282e44 },
       { x: 48, w: 7, h: 19, d: 6, color: 0x343a55 },
       { x: 58, w: 10, h: 14, d: 8, color: 0x2a3048 },
@@ -1457,87 +1512,6 @@ export class Track {
         }
       }
     }
-
-    // Red Hat HQ
-    const rhqW = 14, rhqH = 26, rhqD = 10, rhqX = 22;
-    const towerMat = bldgMat(0x7a8a9a, 0x1a2535);
-    const tower = new THREE.Mesh(new THREE.BoxGeometry(rhqW, rhqH, rhqD), towerMat);
-    tower.position.set(rhqX, rhqH / 2, 0);
-    skylineGroup.add(tower);
-
-    const rhWinMat = new THREE.MeshBasicMaterial({
-      color: 0x88aacc, transparent: true, opacity: 0.75,
-    });
-    const rhRows = Math.floor(rhqH / 2.2);
-    const rhCols = Math.floor(rhqW / 1.8);
-    for (let r = 0; r < rhRows; r++) {
-      for (let c = 0; c < rhCols; c++) {
-        if (Math.random() < 0.2) continue;
-        const win = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.7), rhWinMat);
-        win.position.set(
-          rhqX - (rhqW / 2) + 1 + c * 1.8,
-          1.8 + r * 2.2,
-          rhqD / 2 + 0.06
-        );
-        skylineGroup.add(win);
-      }
-    }
-
-    const signW = rhqW * 0.85, signH = 3.5;
-    const signMat = new THREE.MeshStandardMaterial({
-      color: 0xcc0000, emissive: 0xcc0000, emissiveIntensity: 0.8,
-      metalness: 0.05, roughness: 0.5,
-    });
-    const sign = new THREE.Mesh(new THREE.BoxGeometry(signW, signH, 0.3), signMat);
-    sign.position.set(rhqX, rhqH - 1.2, rhqD / 2 + 0.2);
-    skylineGroup.add(sign);
-
-    const textMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const pixelSize = 0.38;
-    const letters = {
-      R: [[0,0],[1,0],[2,0],[0,1],[2,1],[0,2],[1,2],[2,2],[0,3],[2,3],[0,4]],
-      E: [[0,0],[1,0],[2,0],[0,1],[0,2],[1,2],[0,3],[0,4],[1,4],[2,4]],
-      D: [[0,0],[1,0],[0,1],[2,1],[0,2],[2,2],[0,3],[2,3],[0,4],[1,4]],
-      H: [[0,0],[2,0],[0,1],[2,1],[0,2],[1,2],[2,2],[0,3],[2,3],[0,4],[2,4]],
-      A: [[1,0],[0,1],[2,1],[0,2],[1,2],[2,2],[0,3],[2,3],[0,4],[2,4]],
-      T: [[0,0],[1,0],[2,0],[1,1],[1,2],[1,3],[1,4]],
-    };
-    const word = "REDHAT";
-    const totalW = word.length * 3.5 * pixelSize;
-    let cursorX = rhqX - totalW / 2;
-    for (const ch of word) {
-      if (ch === " ") { cursorX += 1.5 * pixelSize; continue; }
-      const dots = letters[ch];
-      if (!dots) { cursorX += 3.5 * pixelSize; continue; }
-      for (const [dx, dy] of dots) {
-        const px = new THREE.Mesh(
-          new THREE.BoxGeometry(pixelSize * 0.85, pixelSize * 0.85, 0.15), textMat
-        );
-        px.position.set(cursorX + dx * pixelSize, rhqH - 0.2 - dy * pixelSize, rhqD / 2 + 0.4);
-        skylineGroup.add(px);
-      }
-      cursorX += 3.5 * pixelSize;
-    }
-
-    const hatMat = new THREE.MeshStandardMaterial({
-      color: 0xcc0000, emissive: 0xaa0000, emissiveIntensity: 0.6,
-      metalness: 0.05, roughness: 0.5, flatShading: true,
-    });
-    const brim = new THREE.Mesh(new THREE.BoxGeometry(6, 0.6, 2), hatMat);
-    brim.position.set(rhqX, rhqH + 1.8, rhqD / 2 - 0.5);
-    skylineGroup.add(brim);
-    const crown = new THREE.Mesh(new THREE.BoxGeometry(3.5, 2.2, 1.8), hatMat);
-    crown.position.set(rhqX - 0.3, rhqH + 3.2, rhqD / 2 - 0.5);
-    skylineGroup.add(crown);
-    const dent = new THREE.Mesh(
-      new THREE.BoxGeometry(2.4, 0.5, 1.6),
-      bldgMat(0x990000, 0x660000)
-    );
-    dent.position.set(rhqX - 0.3, rhqH + 4.3, rhqD / 2 - 0.5);
-    skylineGroup.add(dent);
-    const tip = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.0, 1.4), hatMat);
-    tip.position.set(rhqX + 1.8, rhqH + 3.0, rhqD / 2 - 0.5);
-    skylineGroup.add(tip);
   }
 
   _mountainSkyline(skylineGroup, baseColor, midColor, peakColor, snowColor) {
@@ -2268,6 +2242,7 @@ export class Track {
       { x: -38, w: 7, h: 16, d: 6, color: 0x343a55 },
       { x: -26, w: 10, h: 10, d: 8, color: 0x282e44 },
       { x: -14, w: 6, h: 14, d: 5, color: 0x303650 },
+      { x: 5, w: 12, h: 30, d: 9, color: 0x4a5a6a },
       { x: 38, w: 9, h: 12, d: 7, color: 0x282e44 },
       { x: 50, w: 7, h: 15, d: 6, color: 0x343a55 },
       { x: 62, w: 10, h: 11, d: 7, color: 0x2a3048 },
@@ -2300,53 +2275,7 @@ export class Track {
       }
     }
 
-    // --- Ansible Tower (main skyscraper with Ansible "A" on top) ---
-    const towerX = 5, towerW = 12, towerH = 30, towerD = 9;
-    const towerMat = bldgMat(0x4a5a6a, 0x1a2535);
-    const tower = new THREE.Mesh(
-      new THREE.BoxGeometry(towerW, towerH, towerD), towerMat
-    );
-    tower.position.set(towerX, towerH / 2, 0);
-    skylineGroup.add(tower);
-
-    const tRows = Math.floor(towerH / 2.2);
-    const tCols = Math.floor(towerW / 1.8);
-    for (let r = 0; r < tRows; r++) {
-      for (let c = 0; c < tCols; c++) {
-        if (Math.random() < 0.2) continue;
-        const win = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.7), winMat);
-        win.position.set(
-          towerX - (towerW / 2) + 1 + c * 1.8,
-          1.8 + r * 2.2,
-          towerD / 2 + 0.06
-        );
-        skylineGroup.add(win);
-      }
-    }
-
-    // Ansible "A" logo on top
-    const aMat = new THREE.MeshStandardMaterial({
-      color: 0xee1100, emissive: 0xee1100, emissiveIntensity: 0.9,
-      metalness: 0.05, roughness: 0.5,
-    });
-    const pixelSize = 0.5;
-    const ansibleA = [
-      [2,0],[1,1],[3,1],[0,2],[4,2],[0,3],[1,3],[2,3],[3,3],[4,3],[0,4],[4,4],[0,5],[4,5]
-    ];
-    const aW = 5 * pixelSize;
-    for (const [dx, dy] of ansibleA) {
-      const px = new THREE.Mesh(
-        new THREE.BoxGeometry(pixelSize * 0.85, pixelSize * 0.85, 0.15), aMat
-      );
-      px.position.set(
-        towerX - aW / 2 + dx * pixelSize + pixelSize / 2,
-        towerH + 1.5 - dy * pixelSize,
-        towerD / 2 + 0.2
-      );
-      skylineGroup.add(px);
-    }
-
-    // --- Durham Water Tower (Lucky Strike style) ---
+    // --- Water tower (generic, kid-friendly skyline) ---
     const wtX = -5, wtBaseH = 14, wtTankR = 3.2, wtTankH = 5;
     const wtPoleMat = bldgMat(0x7a7a7a, 0x2a2a2a);
     const topR = 1.6;
@@ -2410,7 +2339,7 @@ export class Track {
     skylineGroup.add(roof);
 
     const stripeMat = new THREE.MeshStandardMaterial({
-      color: 0xcc2200, emissive: 0xcc2200, emissiveIntensity: 0.5,
+      color: 0x44aacc, emissive: 0x226688, emissiveIntensity: 0.35,
       metalness: 0.1, roughness: 0.5,
     });
     const stripe = new THREE.Mesh(

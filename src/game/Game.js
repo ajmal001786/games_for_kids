@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { CONFIG, LEVELS, DRIVERS, TUTORIAL_STEPS, TUTORIAL_SPAWN_Z, TUTORIAL_TIP_Z, TUTORIAL_QUIZ_QUESTION } from "../data/config.js";
+import { CONFIG, LEVELS, DRIVERS, DISPLAY, TUTORIAL_STEPS, TUTORIAL_SPAWN_Z, TUTORIAL_TIP_Z, TUTORIAL_QUIZ_QUESTION } from "../data/config.js";
 import { Player } from "./Player.js";
 import { Track } from "./Track.js";
 import { Spawner } from "./Spawner.js";
@@ -39,6 +39,8 @@ import {
 import { submitGlobalScore } from "../utils/firebase.js";
 import { GodzillaMode } from "./GodzillaMode.js";
 import { syncThemeUrl } from "../utils/themePath.js";
+import { getActiveProfile, displayName } from "../utils/profile.js";
+import { applyRunStarted, applyQuizCorrect, applyRaceFinished, applyRunScore } from "../utils/rewards.js";
 
 const SFX = {
   SHIELD_HIT: "./assets/audio/shield-hit.wav",
@@ -359,9 +361,7 @@ export class Game {
   }
 
   _applyDeathStarRunVehicle() {
-    if (this.currentLevel === "DS") {
-      this.player.swapCar("xwing");
-    }
+    /* Kids build: keep the player's chosen car on Star Canyon */
   }
 
   _bindKeys() {
@@ -374,24 +374,7 @@ export class Game {
         return;
       }
 
-      if (e.key.length === 1) {
-        this._globalSecretBuffer = (this._globalSecretBuffer + e.key.toLowerCase()).slice(-12);
-        if (this._globalSecretBuffer.endsWith("godzilla")) {
-          this._globalSecretBuffer = "";
-          this._enterGodzilla();
-          return;
-        }
-        if (this._globalSecretBuffer.endsWith("starwars")) {
-          this._globalSecretBuffer = "";
-          if (!getDeathStarTrenchUnlocked()) {
-            this._tryUnlockDeathStarTrench();
-          } else if (this.currentLevel !== "DS") {
-            this.switchLevel("DS", "main_menu");
-            syncThemeUrl("DS", "push");
-          }
-          return;
-        }
-      }
+      /* Secret modes disabled in kids build */
 
       if (this.state === "main_menu" && this._attractScoreShowing) {
         this._attractScoreShowing = false;
@@ -480,91 +463,7 @@ export class Game {
       }
 
       if (this.state === "running" && e.key.length === 1) {
-        this._secretBuffer = (this._secretBuffer + e.key.toLowerCase()).slice(-12);
-        if (this.currentDriver === "nuno" && this.player.carType !== "hippo" && this._secretBuffer.endsWith("hippo")) {
-          this._spawnTransformSmoke();
-          this.player.swapCar("hippo");
-          this.ui.showHippoAnnounce();
-          play(SFX.HIPPO_MODE, 0.9);
-          this._secretBuffer = "";
-        }
-        if (this.currentDriver === "matt" && this.player.carType !== "skateboard" && this._secretBuffer.endsWith("skate")) {
-          this._spawnTransformSmoke();
-          this.player.swapCar("skateboard");
-          this.ui.showHippoCrush("🛹 SKATE MODE 🛹");
-          play(SFX.CORRECT, 0.9);
-          this._secretBuffer = "";
-        }
-        if (this.currentDriver === "andrius" && this.player.carType !== "semi_truck" && this._secretBuffer.endsWith("chunky")) {
-          this._spawnTransformSmoke();
-          this.player.swapCar("semi_truck");
-          this.ui.showHippoCrush("🚛 CHUNKY MODE 🚛");
-          play(SFX.HORN_ANDRIUS, 0.9);
-          this._secretBuffer = "";
-        }
-        if (this.currentDriver === "leo" && this.player.carType !== "scaloneta" && this._secretBuffer.endsWith("scaloneta")) {
-          this._spawnTransformSmoke();
-          this.player.swapCar("scaloneta");
-          this.ui.showHippoCrush("🇦🇷 LA SCALONETA 🇦🇷");
-          play(SFX.SCALONETA, 0.9);
-          this.ui.setScalonetaHud(true);
-          this._secretBuffer = "";
-        }
-        if (this.currentDriver === "alex" && this.player.carType !== "f16" && this._secretBuffer.endsWith("topgun")) {
-          this._spawnTransformSmoke();
-          this.player.swapCar("f16");
-          this.ui.showHippoCrush("✈️ TOP GUN MODE ✈️");
-          play(SFX.BOOST_WHOOSH, 0.9);
-          this._secretBuffer = "";
-        }
-        if (this.currentDriver === "anshul" && this.player.carType !== "trex" && this._secretBuffer.endsWith("demodemodemo")) {
-          this._spawnTransformSmoke();
-          this.player.swapCar("trex");
-          this.ui.showHippoCrush("🦖 T-REX MODE 🦖");
-          play(SFX.TREX_ROAR, 0.9);
-          this._secretBuffer = "";
-        }
-        if (this.currentDriver === "remy" && this.player.carType !== "ogre" && this._secretBuffer.endsWith("quest")) {
-          this._spawnTransformSmoke();
-          this.player.swapCar("ogre");
-          this.ui.showHippoCrush("🧌 OGRE MODE 🧌");
-          this._playOgreSfx(0.9);
-          this.track.setCastle(true);
-          startBgm(QUEST_BGM, 0.15);
-          this._secretBuffer = "";
-        }
-        if (this.currentDriver === "justin" && this.player.carType !== "crooner" && this._secretBuffer.endsWith("crooner")) {
-          this._spawnTransformSmoke();
-          this.player.swapCar("crooner");
-          this._primeCroonerSfxBuffers();
-          this.ui.showHippoCrush("🎤 THE DRIVING<br>CROONER 🎤");
-          this._playCroonerSfx(0.9);
-          this._secretBuffer = "";
-        }
-        if (this.currentDriver === "roger" && this.player.carType !== "timetrain" && this._secretBuffer.endsWith("crossfit")) {
-          this._spawnTransformSmoke();
-          this.player.swapCar("timetrain");
-          this._trainHitCount = 0;
-          this.ui.showHippoCrush("🚂 TIME TRAIN<br>MODE 🚂");
-          play(SFX.TRAIN_WHISTLE, 0.9);
-          this._secretBuffer = "";
-        }
-        if (this.currentDriver === "hicham" && this.player.carType !== "bicycle" && this._secretBuffer.endsWith("leafs")) {
-          this._spawnTransformSmoke();
-          this.player.swapCar("bicycle");
-          this.ui.showHippoCrush("🚲 LEAFS MODE 🚲");
-          play(SFX.BOOST_WHOOSH, 0.9);
-          this._secretBuffer = "";
-        }
-        if (this.currentDriver === "aubrey" && this.player.carType !== "cadillac" && this._secretBuffer.endsWith("hollywood")) {
-          this._spawnTransformSmoke();
-          this.player.swapCar("cadillac");
-          this.ui.showHippoCrush("🌟 HOLLYWOOD MODE 🌟");
-          play(SFX.BOOST_WHOOSH, 0.9);
-          this._rainbowRoad = true;
-          this.track.setRainbow(true);
-          this._secretBuffer = "";
-        }
+        /* Driver secret vehicle transforms disabled in kids build */
       }
     });
 
@@ -576,31 +475,7 @@ export class Game {
   }
 
   triggerSecret() {
-    if (this.state !== "running") return;
-    const d = this.currentDriver;
-    const ct = this.player.carType;
-    const secrets = {
-      nuno:    { car: "hippo",     label: "🦛 HIPPO MODE 🦛",           sfx: SFX.HIPPO_MODE },
-      matt:    { car: "skateboard", label: "🛹 SKATE MODE 🛹",          sfx: SFX.CORRECT },
-      andrius: { car: "semi_truck", label: "🚛 CHUNKY MODE 🚛",        sfx: SFX.HORN_ANDRIUS },
-      leo:     { car: "scaloneta",  label: "🇦🇷 LA SCALONETA 🇦🇷",      sfx: SFX.SCALONETA, extra: () => this.ui.setScalonetaHud(true) },
-      alex:    { car: "f16",        label: "✈️ TOP GUN MODE ✈️",        sfx: SFX.BOOST_WHOOSH },
-      anshul:  { car: "trex",       label: "🦖 T-REX MODE 🦖",         sfx: SFX.TREX_ROAR },
-      remy:    { car: "ogre",       label: "🧌 OGRE MODE 🧌",          sfx: null, extra: () => { this._playOgreSfx(0.9); this.track.setCastle(true); startBgm(QUEST_BGM, 0.15); } },
-      justin:  { car: "crooner",    label: "🎤 THE DRIVING<br>CROONER 🎤", sfx: null, extra: () => this._playCroonerSfx(0.9) },
-      roger:   { car: "timetrain",  label: "🚂 TIME TRAIN<br>MODE 🚂",  sfx: SFX.TRAIN_WHISTLE, extra: () => { this._trainHitCount = 0; } },
-      hicham:  { car: "bicycle",    label: "🚲 LEAFS MODE 🚲",         sfx: SFX.BOOST_WHOOSH },
-      aubrey:  { car: "cadillac",   label: "🌟 HOLLYWOOD MODE 🌟",     sfx: SFX.BOOST_WHOOSH, extra: () => { this._rainbowRoad = true; this.track.setRainbow(true); } },
-    };
-    const s = secrets[d];
-    if (!s || ct === s.car) return;
-    this._spawnTransformSmoke();
-    this.player.swapCar(s.car);
-    if (s.car === "crooner") this._primeCroonerSfxBuffers();
-    if (d === "nuno") { this.ui.showHippoAnnounce(); } else { this.ui.showHippoCrush(s.label); }
-    if (s.sfx) play(s.sfx, 0.9);
-    if (s.extra) s.extra();
-    this._secretBuffer = "";
+    /* Secret modes disabled in kids build */
   }
 
   _enterGodzilla() {
@@ -1095,7 +970,7 @@ export class Game {
       this._demoCompleted.add(demoId);
       this.score += 500;
       this.ui.showPickupPopup("+500");
-      this.ui.setStatus(this._t("⭐ +500 Interactive Experience"), 2500);
+      this.ui.setStatus(this._t("⭐ +500 bonus points"), 2500);
       play(SFX.CORRECT, 0.7);
     }
 
@@ -1165,6 +1040,8 @@ export class Game {
     this.ui.showLevelComplete(false);
     this.ui.showPause(false);
     this.ui.showHud(true);
+    this.ui.setPlayerBadge();
+    this._notifyRewards(applyRunStarted());
     this.ui.setScalonetaHud(this._isScaloneta);
     if (this.player.carType === "crooner") this._primeCroonerSfxBuffers();
     if (isDs) {
@@ -1371,7 +1248,7 @@ export class Game {
       }
       if (step.kind === "obstacle" && step.mustHit && !this._tutorialEntityWasHit) {
         play(SFX.WRONG, 0.7);
-        this.ui.setStatus("You dodged it! Hit the Outage to use your Shield.", 2200);
+        this.ui.setStatus(`You dodged it! Hit the ${DISPLAY.OBSTACLE} to use your Shield.`, 2200);
         this._tutorialSpawned = false;
         this._tutorialEntity = null;
         this._tutorialTipShown = false;
@@ -1379,7 +1256,7 @@ export class Game {
         return;
       }
       if (step.kind === "obstacle" && !step.mustHit && !this._tutorialEntityWasHit) {
-        this.ui.setStatus("Great dodge! You avoided the Outage!", 1800);
+        this.ui.setStatus(`Great dodge! You avoided the ${DISPLAY.OBSTACLE}!`, 1800);
       }
       this._tutorialEntityWasHit = false;
       this._tutorialPickupCollected = false;
@@ -1576,11 +1453,6 @@ export class Game {
   switchLevel(levelId, returnTo = "main_menu") {
     if (!LEVELS[levelId]) return;
     this._revertFromDeathStarComplete = false;
-    if (levelId === "DS" && !getDeathStarTrenchUnlocked()) return;
-    if (this.currentLevel === "DS" && levelId !== "DS") {
-      setDeathStarTrenchUnlocked(false);
-      this.ui.syncDeathStarTrenchCardVisibility();
-    }
     this.currentLevel = levelId;
     setLastLevel(levelId);
     this.spawner.levelId = levelId;
@@ -1689,14 +1561,14 @@ export class Game {
         );
         lines.push(s
           ? `+${pts} puntos${fm > 1 ? " (Flujo de automatización ×1.2 aplicado)" : ""}`
-          : `+${pts} score${fm > 1 ? " (Automation Flow ×1.2 applied)" : ""}`);
+          : `+${pts} score${fm > 1 ? ` (${DISPLAY.FLOW} ×1.2 applied)` : ""}`);
         lines.push(s
           ? `Racha → ${nextStreak} (3 correctas activa Flujo de automatización)`
-          : `Streak → ${nextStreak} (3 correct triggers Automation Flow)`);
+          : `Streak → ${nextStreak} (3 correct triggers ${DISPLAY.FLOW})`);
         if (nextStreak >= CONFIG.STREAK_FOR_FLOW) {
           lines.push(
             s ? "Siguiente: Flujo de automatización — 8s puntos ×1.2 + imán de recolectables"
-              : "Next: Automation Flow — 8s score ×1.2 + pickup magnet + glow"
+              : `Next: ${DISPLAY.FLOW} — 8s score ×1.2 + pickup magnet + glow`
           );
         }
         return { title: s ? "¡CORRECTO!" : "CORRECT!", lines };
@@ -1716,7 +1588,7 @@ export class Game {
         if (nextStreak >= CONFIG.STREAK_FOR_FLOW) {
           lines.push(
             s ? "Flujo de automatización se activa — 8s puntos ×1.2 + imán"
-              : "Automation Flow will trigger — 8s score ×1.2 + pickup magnet"
+              : `${DISPLAY.FLOW} will trigger — 8s score ×1.2 + pickup magnet`
           );
         }
         return { title: s ? "¡CORRECTO!" : "CORRECT!", lines };
@@ -1742,8 +1614,13 @@ export class Game {
     clearTimeout(this._quizSafetyTimer);
   }
 
+  _notifyRewards(defs) {
+    if (defs && defs.length) this.ui.showRewardUnlocks(defs);
+  }
+
   _finishQuiz(correct) {
     const mode = this.quizMode;
+    const q = this.currentQuestion;
     this.ui.showQuiz(false);
     this.state = "running";
     this.quizMode = null;
@@ -1767,6 +1644,10 @@ export class Game {
         this.score += CONFIG.BOOST_QUIZ_CORRECT * this._flowMult();
         this.sessionCorrect += 1;
         addTotalCorrectAnswers(1);
+        this._notifyRewards(applyQuizCorrect({
+          category: q && q.category,
+          streak: this.streak,
+        }));
         const now = performance.now();
         const stacking = now < this.boostUntil;
         const base = stacking ? this.boostUntil : now;
@@ -1795,6 +1676,10 @@ export class Game {
         this.streak += CONFIG.REMEDIATION_CORRECT_STREAK;
         this.sessionCorrect += 1;
         addTotalCorrectAnswers(1);
+        this._notifyRewards(applyQuizCorrect({
+          category: q && q.category,
+          streak: this.streak,
+        }));
         this.ui.setStatus(
           this._isScaloneta
             ? `¡Salud restaurada! (${left} remediación${left !== 1 ? "es" : ""} restante${left !== 1 ? "s" : ""})`
@@ -1824,7 +1709,7 @@ export class Game {
       this.streak = 0;
       this.automationFlowUntil = performance.now() + CONFIG.FLOW_DURATION * 1000;
       this.player.setAutomationFlowActive(true);
-      this.ui.setStatus(this._t("Automation Flow active"), CONFIG.STATUS_MESSAGE_MS);
+      this.ui.setStatus(this._t(`${DISPLAY.FLOW} active`), CONFIG.STATUS_MESSAGE_MS);
     }
   }
 
@@ -1878,11 +1763,13 @@ export class Game {
       pickups: this.pickupsCollected,
       correct: this.sessionCorrect,
     });
+    this.ui.setPlayerBadge();
     this.ui.resetGameOver(getLastName(), getLastCountry(), {
       hideNameEntry: this.currentLevel === "DS",
     });
     this.ui.showHud(false);
     this.ui.showGameOver(true);
+    this._notifyRewards(applyRunScore({ score: this.score }));
 
     clearTimeout(this._gameOverTimer);
     this._gameOverTimer = setTimeout(() => {
@@ -1931,27 +1818,7 @@ export class Game {
     }
 
     const isCheater = this._isCheater();
-    const cheaterType = this.currentLevel === "DS"
-      ? "deathstar"
-      : this.player.carType === "hippo"
-        ? "hippo"
-        : this.player.carType === "scaloneta"
-          ? "scaloneta"
-          : this.player.carType === "f16"
-            ? "f16"
-            : this.player.carType === "trex"
-              ? "trex"
-              : this.player.carType === "cadillac"
-                ? "cadillac"
-                : this.player.carType === "ogre"
-                  ? "ogre"
-                  : this.player.carType === "crooner"
-                    ? "crooner"
-                    : this.player.carType === "timetrain"
-                      ? "timetrain"
-                      : this.player.carType === "bicycle"
-                        ? "bicycle"
-                        : isCheater ? "semi" : null;
+    const cheaterType = this.currentLevel === "DS" ? "starcanyon" : null;
     this.ui.setLevelCompleteStats({
       score: this.score,
       hits: this.obstaclesHit,
@@ -1959,6 +1826,8 @@ export class Game {
       correct: this.sessionCorrect,
       finishBonus,
     }, isCheater, cheaterType);
+    this.ui.setPlayerBadge();
+    this._notifyRewards(applyRaceFinished({ score: this.score }));
     if (!isCheater) {
       this.ui.resetLevelComplete(getLastName(), getLastCountry());
     }
@@ -1969,10 +1838,6 @@ export class Game {
   }
 
   async saveLcScore() {
-    if (this.currentLevel === "DS") {
-      this.ui.setStatus(this._t("Trench run — leaderboards are not the Jedi way."), 4000);
-      return;
-    }
     if (this._isCheater()) {
       const msg = this.player.carType === "hippo"
         ? "Sorry, hippo mode can't be on the leaderboard. Stop cheating!"
@@ -1996,20 +1861,18 @@ export class Game {
       this.ui.setStatus(msg, 4000);
       return;
     }
-    const name = this.ui.getLcEnteredName() || "AAA";
+    const profile = getActiveProfile();
+    const name = this.ui.getLcEnteredName() || profile.name || displayName(profile);
     const country = this.ui.getLcSelectedCountry() || "US";
+    const avatar = profile.avatar || "";
     setLastName(name);
     setLastCountry(country);
-    const { rank, board } = addLeaderboardEntry(name, this.score, country, this.currentLevel);
-    await submitGlobalScore(name, this.score, this.currentLevel, country);
+    const { rank, board } = addLeaderboardEntry(name, this.score, country, this.currentLevel, avatar);
+    await submitGlobalScore({ name, score: this.score, level: this.currentLevel, country, avatar });
     this.ui.showLcLeaderboard(board, rank, name, this.score);
   }
 
   async saveScore() {
-    if (this.currentLevel === "DS") {
-      this.ui.setStatus(this._t("Trench run — leaderboards are not the Jedi way."), 4000);
-      return;
-    }
     if (this._isCheater()) {
       const msg = this.player.carType === "hippo"
         ? "Sorry, hippo mode can't be on the leaderboard. Stop cheating!"
@@ -2033,12 +1896,14 @@ export class Game {
       this.ui.setStatus(msg, 4000);
       return;
     }
-    const name = this.ui.getEnteredName() || "AAA";
+    const profile = getActiveProfile();
+    const name = this.ui.getEnteredName() || profile.name || displayName(profile);
     const country = this.ui.getSelectedCountry() || "US";
+    const avatar = profile.avatar || "";
     setLastName(name);
     setLastCountry(country);
-    const { rank, board } = addLeaderboardEntry(name, this.score, country, this.currentLevel);
-    await submitGlobalScore(name, this.score, this.currentLevel, country);
+    const { rank, board } = addLeaderboardEntry(name, this.score, country, this.currentLevel, avatar);
+    await submitGlobalScore({ name, score: this.score, level: this.currentLevel, country, avatar });
     this.ui.showLeaderboard(board, rank, name, this.score);
   }
 
@@ -2153,7 +2018,7 @@ export class Game {
       if (this.state === "quiz") {
         this.forceUnstick();
       }
-    }, 30000);
+    }, (CONFIG.QUIZ_ANSWER_SECONDS + 5) * 1000);
   }
 
   update() {
@@ -2522,7 +2387,7 @@ export class Game {
   }
 
   _isCheater() {
-    return this.currentLevel === "DS" || this._isSemiTruck() || this.player.carType === "hippo" || this.player.carType === "scaloneta" || this.player.carType === "f16" || this.player.carType === "trex" || this.player.carType === "cadillac" || this.player.carType === "ogre" || this.player.carType === "crooner" || this.player.carType === "timetrain" || this.player.carType === "bicycle";
+    return false;
   }
 
   _croonerSmashLines = [
@@ -3009,7 +2874,7 @@ export class Game {
       ? (isGator ? `¡Ataque de cocodrilo! -${dmg} salud. Estás en ${hp}.` : `¡Obstáculo! -${dmg} salud (Corte). Estás en ${hp}.`)
       : (isSheep ? `Sheep hit! -${dmg} health. You're at ${hp}.`
         : isGator ? `Gator attack! -${dmg} health. You're at ${hp}.`
-        : `Obstacle hit! -${dmg} health (Outage). You're at ${hp}.`);
+        : `Obstacle hit! -${dmg} energy (${DISPLAY.OBSTACLE}). You're at ${hp}.`);
     this.ui.setStatus(msg, CONFIG.STATUS_HIT_MS);
 
     if (this.health <= 0) {
@@ -3150,10 +3015,10 @@ export class Game {
         return;
       } else if (t === "PLAYBOOK") {
         play(SFX.PICKUP, 0.6);
-        this.ui.showPickupPopup("Playbook +100");
+        this.ui.showPickupPopup(`${DISPLAY.STAR} +100`);
       } else if (t === "CERTIFIED_COLLECTION") {
         play(SFX.PICKUP, 0.6);
-        this.ui.showPickupPopup("Collection +150");
+        this.ui.showPickupPopup(`${DISPLAY.GEM} +150`);
       } else {
         play(SFX.PICKUP, 0.6);
       }
@@ -3190,14 +3055,14 @@ export class Game {
       this.playbookCount += 1;
       this.playbookPts += pts;
       const extended = this._extendBoostOnPickup();
-      let label = comboMult > 1 ? `Playbook +${pts} (x${comboMult})` : `Playbook +${pts}`;
+      let label = comboMult > 1 ? `${DISPLAY.STAR} +${pts} (x${comboMult})` : `${DISPLAY.STAR} +${pts}`;
       if (extended) label += this._isScaloneta ? " ⚡+turbo" : " ⚡+boost";
       this.ui.showPickupPopup(label);
       if (this.playbookCount % 3 === 0) {
-        this._applyPickupSpeedUp("Playbook", this.playbookCount);
+        this._applyPickupSpeedUp(DISPLAY.STAR, this.playbookCount);
       } else {
         this.ui.setStatus(
-          this._isScaloneta ? `Recolectado: Playbook — +${pts} puntos` : `Pickup: Playbook — +${pts} score`,
+          this._isScaloneta ? `Recolectado: ${DISPLAY.STAR} — +${pts} puntos` : `Pickup: ${DISPLAY.STAR} — +${pts} score`,
           CONFIG.STATUS_HIT_MS
         );
       }

@@ -35,18 +35,10 @@
       })();
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Built to Automate</title>
+    <title>Life Skills Racers</title>
     <link rel="icon" href="./assets/favicon.png" type="image/png" />
     <link rel="apple-touch-icon" href="./assets/favicon.png" />
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YZ9858WG76"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-
-      gtag('config', 'G-YZ9858WG76');
-    </script>
+    <!-- Google tag removed for offline / kid-friendly build -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -57,9 +49,7 @@
     <script type="importmap">
       {
         "imports": {
-          "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-          "firebase/app": "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js",
-          "firebase/firestore": "https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js"
+          "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
         }
       }
     </script>
@@ -71,10 +61,11 @@
     </div>
     <a
       id="github-link"
-      href="https://github.com/abwalczyk/ansible-f1"
-      target="_blank"
+      href="#"
+      class="hidden"
       rel="noopener noreferrer"
       title="View on GitHub"
+      aria-hidden="true"
     >
       <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
         <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
@@ -101,6 +92,7 @@
         <div class="tutorial-tip-card">
           <p id="tutorial-tip-text" class="tutorial-tip-text"></p>
           <button type="button" id="btn-tutorial-got-it" class="btn primary btn-small">Got it!</button>
+          <div class="tutorial-tip-countdown"><div id="tutorial-tip-countdown-fill" class="tutorial-tip-countdown-fill"></div></div>
         </div>
         <div class="tutorial-tip-arrow"></div>
       </div>
@@ -114,7 +106,7 @@
       </div>
       <!-- skip button moved inside tutorial-checklist below -->
       <div id="tutorial-banner" class="tutorial-banner hidden" aria-hidden="true">
-        <p class="tutorial-banner-text">Win the race. Collect points. Don't die!</p>
+        <p class="tutorial-banner-text">Race, collect stars, answer quizzes — have fun!</p>
         <p class="tutorial-banner-sub">Use <kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd> to steer</p>
       </div>
 
@@ -134,7 +126,11 @@
 
       <div id="hud" class="hud hidden">
         <div class="hud-theme-strip" aria-label="Current track">
-          <div id="hud-level-name" class="hud-theme-title">AIOps</div>
+          <div id="hud-player" class="hud-player hidden" aria-label="Player">
+            <span id="hud-player-face" class="hud-player-face" aria-hidden="true"></span>
+            <span id="hud-player-name" class="hud-player-name"></span>
+          </div>
+          <div id="hud-level-name" class="hud-theme-title">City Cruise</div>
         </div>
         <button type="button" id="btn-hud-info" class="hud-info-toggle" title="Show info">ℹ</button>
         <div class="hud-left">
@@ -142,16 +138,16 @@
           <div class="hud-stats">
             <div class="hud-stat-block">
               <div class="hud-health-row">
-                Health <span id="hud-health">100</span>
+                Energy <span id="hud-health">100</span>
               </div>
               <p class="hud-stat-hint">
-                Your run meter — outages drain it. At 0, game over.
+                Your energy bar — puddles drain it. At 0, game over.
               </p>
             </div>
             <div>Score <span id="hud-score">0</span></div>
             <div>Speed <span id="hud-speed">0</span></div>
             <div class="hud-flow-progress">
-              Flow <span id="hud-streak">0</span> / 3
+              Super Streak <span id="hud-streak">0</span> / 3
               <div class="flow-pips">
                 <span class="flow-pip" id="flow-pip-0"></span>
                 <span class="flow-pip" id="flow-pip-1"></span>
@@ -159,11 +155,11 @@
               </div>
             </div>
             <div class="hud-pickup-counter">
-              Playbooks <span id="hud-playbooks">0</span>
+              Stars <span id="hud-playbooks">0</span>
               <span class="hud-pickup-pts" id="hud-playbook-pts">0 pts</span>
             </div>
             <div class="hud-pickup-counter">
-              Collections <span id="hud-collections">0</span>
+              Gems <span id="hud-collections">0</span>
               <span class="hud-pickup-pts" id="hud-collection-pts">0 pts</span>
             </div>
           </div>
@@ -171,7 +167,7 @@
             <div class="legend-title">Field guide</div>
             <div class="legend-row">
               <span class="swatch swatch-outage" aria-hidden="true"></span>
-              <span><strong>Outage</strong> — hazard · dodge it</span>
+              <span><strong>Puddle</strong> — hazard · dodge it</span>
             </div>
             <div class="legend-row">
               <span class="swatch swatch-rival" aria-hidden="true"></span>
@@ -179,11 +175,11 @@
             </div>
             <div class="legend-row">
               <img class="swatch-icon" src="./assets/playbook-icon.png" alt="" aria-hidden="true" />
-              <span><strong>Playbook</strong> — +100 score</span>
+              <span><strong>Star</strong> — +100 score</span>
             </div>
             <div class="legend-row">
               <img class="swatch-icon" src="./assets/collection-icon.png" alt="" aria-hidden="true" />
-              <span><strong>Collection</strong> — +150 score</span>
+              <span><strong>Gem</strong> — +150 score</span>
             </div>
             <div class="legend-row">
               <span class="swatch swatch-shield" aria-hidden="true"></span>
@@ -191,12 +187,12 @@
             </div>
             <div class="legend-row">
               <span class="swatch swatch-boost" aria-hidden="true"></span>
-              <span><strong>Boost token</strong> — quiz for speed</span>
+              <span><strong>Boost token</strong> — life-skills quiz for speed</span>
             </div>
             <div class="legend-divider"></div>
             <div class="legend-row legend-flow-row">
               <span class="swatch swatch-flow" aria-hidden="true">⚡</span>
-              <span><strong>Automation Flow</strong> — 3 correct answers in a row triggers 8s of 1.2× score + pickup magnet</span>
+              <span><strong>Super Streak</strong> — 3 correct answers in a row triggers 8s of 1.2× score + pickup magnet</span>
             </div>
             <div class="legend-divider"></div>
             <label class="legend-row quiz-toggle-row">
@@ -211,7 +207,7 @@
           <div id="hud-shield">Shield: —</div>
           <div id="hud-flow">Flow: —</div>
           <div id="hud-remediations" class="hud-remediations">
-            <span class="rem-label">Fixes</span>
+            <span class="rem-label">Second Chances</span>
             <span class="rem-icons" id="rem-icons"></span>
           </div>
           <div id="hud-manual-boost" class="hud-manual-boost ready">
@@ -240,7 +236,7 @@
         </div>
         <div id="hud-status" class="hud-status"></div>
         <button type="button" id="btn-touch-pause" class="touch-pause" title="Pause">&#10074;&#10074;</button>
-        <button type="button" id="btn-mobile-secret" class="mobile-secret-btn" title="Secret">★</button>
+        <button type="button" id="btn-mobile-secret" class="mobile-secret-btn hidden" title="Secret" aria-hidden="true">★</button>
       </div>
 
       <div id="attract-scores" class="attract-scores hidden">
@@ -250,9 +246,45 @@
       </div>
 
       <div id="main-menu" class="overlay panel">
-        <p class="eyebrow">Ansible arcade</p>
-        <h1 class="title">Built to Automate</h1>
-        <p class="tagline">Race automation through a chaotic IT highway.</p>
+        <p class="eyebrow">Quiz racing for kids</p>
+        <h1 class="title">Life Skills Racers</h1>
+        <p class="tagline">Race, dodge puddles, and answer quizzes about money, safety, kindness, and more.</p>
+        <div id="kid-setup" class="kid-setup">
+          <p class="kid-setup-label" id="kid-profile-label">Who's playing?</p>
+          <div class="kid-profile-row" role="group" aria-labelledby="kid-profile-label">
+            <button type="button" class="kid-profile" id="kid-profile-0" data-slot="0" aria-label="Player slot 1">P1</button>
+            <button type="button" class="kid-profile" id="kid-profile-1" data-slot="1" aria-label="Player slot 2">P2</button>
+            <button type="button" class="kid-profile" id="kid-profile-2" data-slot="2" aria-label="Player slot 3">P3</button>
+          </div>
+          <label class="kid-setup-label" for="kid-name">Your name</label>
+          <input type="text" id="kid-name" class="kid-name-input"
+                 placeholder="Type your name" maxlength="16" autocomplete="off"
+                 aria-label="Your name" />
+          <p class="kid-setup-label" id="kid-age-label">How old are you?</p>
+          <div class="kid-age-row" role="group" aria-labelledby="kid-age-label">
+            <button type="button" class="btn kid-age" id="kid-age-7" data-age="7"
+                    aria-label="Age 7, easier questions">7</button>
+            <button type="button" class="btn kid-age" id="kid-age-9" data-age="9"
+                    aria-label="Age 9, medium questions">9</button>
+            <button type="button" class="btn kid-age" id="kid-age-11" data-age="11"
+                    aria-label="Age 11, harder questions">11</button>
+          </div>
+          <p class="kid-setup-label" id="kid-avatar-label">Pick your avatar</p>
+          <div class="kid-avatar-sets" role="tablist" aria-label="Avatar themes">
+            <button type="button" class="kid-set-tab" id="kid-set-animals" data-set="animals"
+                    role="tab" aria-selected="true" aria-label="Animal avatars">Animals</button>
+            <button type="button" class="kid-set-tab" id="kid-set-heroes" data-set="heroes"
+                    role="tab" aria-selected="false" aria-label="Hero avatars">Heroes</button>
+            <button type="button" class="kid-set-tab" id="kid-set-silly" data-set="silly"
+                    role="tab" aria-selected="false" aria-label="Silly avatars">Silly</button>
+            <button type="button" class="kid-set-tab" id="kid-set-bonus" data-set="bonus"
+                    role="tab" aria-selected="false" aria-label="Bonus avatars you earn">Bonus</button>
+          </div>
+          <div id="kid-avatar-grid" class="kid-avatar-grid" role="listbox"
+               aria-labelledby="kid-avatar-label"></div>
+          <p id="kid-setup-hint" class="kid-setup-hint hidden" role="alert"></p>
+        </div>
+
         <div class="best-row">
           Best Score <span id="menu-best">0</span>
         </div>
@@ -261,6 +293,7 @@
         <button type="button" id="btn-choose-driver" class="btn">Choose Your Driver</button>
         <button type="button" id="btn-how-to-play" class="btn">How to Play</button>
         <button type="button" id="btn-highscores" class="btn">Global Scores</button>
+        <button type="button" id="btn-collection" class="btn">My Collection</button>
         <button type="button" id="btn-achievements" class="btn">Achievements</button>
         <button type="button" id="btn-credits" class="btn">Credits</button>
 
@@ -270,6 +303,13 @@
             <p style="text-align:center;color:var(--muted);padding:1rem">Loading…</p>
           </div>
           <button type="button" id="btn-credits-back" class="btn" style="margin-top:0.6rem">Back</button>
+        </div>
+
+        <div id="menu-collection" class="menu-collection hidden">
+          <h3 class="lb-title">My Collection</h3>
+          <p class="collection-hint">Gifts you earn stay forever. Grey ones tell you how to get them!</p>
+          <div class="collection-grid" id="collection-grid"></div>
+          <button type="button" id="btn-collection-back" class="btn" style="margin-top:0.6rem">Back</button>
         </div>
 
         <div id="menu-achievements" class="menu-achievements hidden">
@@ -304,7 +344,7 @@
           <div class="tutorial-scroll">
             <section class="tutorial-section">
               <h3>Goal</h3>
-              <p>Reach the <strong>finish line</strong> with <strong>Health</strong> above zero and the highest <strong>Score</strong> you can get.</p>
+              <p>Reach the <strong>finish line</strong> with <strong>energy</strong> above zero and the highest <strong>score</strong> you can get.</p>
             </section>
             <section class="tutorial-section">
               <h3>Controls</h3>
@@ -320,21 +360,17 @@
             <section class="tutorial-section">
               <h3>Road items</h3>
               <ul class="tutorial-list">
-                <li><strong>Outage</strong> &amp; <strong>rival cars</strong> — hazards, dodge or lose health.</li>
-                <li><strong>Playbook</strong> +100 · <strong>Collection</strong> +150 — score pickups.</li>
+                <li><strong>Puddles</strong> &amp; <strong>rival cars</strong> — hazards, dodge or lose energy.</li>
+                <li><strong>Stars</strong> +100 · <strong>Gems</strong> +150 — score pickups.</li>
                 <li><strong>Shield</strong> — absorbs one hit.</li>
-                <li><strong>Boost token</strong> — quiz for a speed burst.</li>
-                <li><strong>Automation Flow</strong> — 3 correct answers → 8s of 1.2× score &amp; pickup magnet.</li>
-                <li><strong>Remediation</strong> — answer after a hit to recover health.</li>
+                <li><strong>Quiz Boost</strong> — answer a life-skills question for a speed burst.</li>
+                <li><strong>Super Streak</strong> — 3 correct answers → 8s of 1.2× score &amp; pickup magnet.</li>
+                <li><strong>Second Chance</strong> — answer after a hit to recover energy.</li>
               </ul>
             </section>
             <section class="tutorial-section">
-              <h3>Billboards</h3>
-              <p>Three per track — click to open partner demos. First visit earns <strong>+500 Interactive Experience</strong>.</p>
-            </section>
-            <section class="tutorial-section tutorial-spoiler">
-              <h3>Secrets</h3>
-              <p>Some drivers have secret keywords and hidden vehicle modes. The DeLorean’s <strong>Flux Capacitor</strong> fires on car-click. Discover the rest!</p>
+              <h3>Signs along the track</h3>
+              <p>Each track has friendly billboards with life-skills reminders. Click one to read the tip and earn <strong>+500 bonus points</strong> the first time.</p>
             </section>
           </div>
           <div class="tutorial-actions">
@@ -376,6 +412,10 @@
 
       <div id="game-over" class="overlay panel hidden">
         <h2>Game Over</h2>
+        <div id="go-player" class="hud-player go-player-badge hidden" aria-label="Player">
+          <span id="go-player-face" class="hud-player-face" aria-hidden="true"></span>
+          <span id="go-player-name" class="hud-player-name"></span>
+        </div>
 
         <div id="go-entry" class="go-entry">
           <p class="go-final-score">Score: <span id="go-score">0</span></p>
@@ -416,6 +456,10 @@
       <div id="level-complete" class="overlay panel hidden">
         <div id="lc-flags" class="lc-flags">🏁</div>
         <h2 id="lc-title">Level Complete!</h2>
+        <div id="lc-player" class="hud-player go-player-badge hidden" aria-label="Player">
+          <span id="lc-player-face" class="hud-player-face" aria-hidden="true"></span>
+          <span id="lc-player-name" class="hud-player-name"></span>
+        </div>
         <p id="lc-message" class="lc-message"></p>
         <p class="go-final-score">Score: <span id="lc-score">0</span></p>
         <div class="go-stats-row">
@@ -454,9 +498,138 @@
       </div>
 
       <div id="recovery-overlay" class="overlay panel compact hidden">
-        <h3>Attempt remediation?</h3>
-        <p class="hint">Answer a skill check to recover health.</p>
+        <h3>Second Chance?</h3>
+        <p class="hint">Answer a life-skills question to recover energy.</p>
         <p id="recovery-countdown" class="recovery-countdown">5</p>
         <div id="recovery-first-tip" class="recovery-first-tip hidden">
           <p class="recovery-tip-title">First time? Here’s the tradeoff:</p>
           <ul class="recovery-tip-list">
+            <li>
+              <strong>Yes — take the quiz:</strong> Correct → +10 energy, streak up, counts toward Super Streak.
+              Wrong → <strong>lose 5 more energy</strong> (on top of the hit you already took).
+            </li>
+            <li>
+              <strong>No — skip:</strong> No quiz. You keep current energy and continue immediately — no extra penalty, but no recovery or streak gain.
+            </li>
+          </ul>
+        </div>
+        <div class="row">
+          <button type="button" id="recovery-yes" class="btn primary">Yes</button>
+          <button type="button" id="recovery-no" class="btn">No</button>
+        </div>
+      </div>
+
+      <div id="quiz-overlay" class="overlay panel quiz hidden">
+        <div id="quiz-question-panel">
+          <h3 id="quiz-title">Life Skills Quiz</h3>
+          <p id="quiz-countdown" class="quiz-countdown">5</p>
+          <p id="quiz-prompt"></p>
+          <div id="quiz-options" class="quiz-options"></div>
+          <div class="quiz-bottom-row">
+            <p class="hint">Keys 1–4 or click · Esc to skip</p>
+            <button type="button" id="btn-quiz-skip" class="btn btn-quiz-skip">Skip</button>
+          </div>
+        </div>
+        <div id="quiz-result-panel" class="quiz-result-panel hidden">
+          <div id="quiz-result-burst" class="quiz-result-burst" aria-hidden="true"></div>
+          <p id="quiz-result-title" class="quiz-result-title"></p>
+          <ul id="quiz-result-lines" class="quiz-result-lines"></ul>
+          <p id="quiz-result-explain" class="quiz-result-explain"></p>
+          <div id="quiz-result-timer" class="quiz-result-timer hidden">
+            <span id="quiz-result-countdown"></span>s — Esc to continue
+          </div>
+        </div>
+      </div>
+
+      <div id="billboard-overlay" class="overlay hidden">
+        <div class="billboard-panel">
+          <div class="billboard-topbar">
+            <span class="billboard-label" id="billboard-label">Tip</span>
+            <div class="billboard-topbar-right">
+              <span id="billboard-bonus" class="billboard-bonus hidden">+500 bonus points</span>
+              <button type="button" id="btn-billboard-close" class="billboard-close" title="Close">&times;</button>
+              <div id="billboard-exit-hint" class="billboard-exit-hint hidden">Click here to return to the game</div>
+            </div>
+          </div>
+          <div class="billboard-content" id="billboard-content">
+            <!-- dynamic: iframe embed or coming-soon placeholder injected by UI.js -->
+          </div>
+        </div>
+      </div>
+
+      <div id="level-select" class="overlay panel hidden">
+        <h2>Choose Track</h2>
+        <p class="level-select-hint">Same racing fun — different scenery &amp; life-skills signs</p>
+        <div class="level-cards">
+          <button class="level-card" data-level="A">
+            <canvas class="level-preview" width="180" height="120"></canvas>
+            <div class="level-card-label">City Cruise</div>
+            <div class="level-card-sub">Neon streets &amp; bright lights</div>
+          </button>
+          <button class="level-card" data-level="B">
+            <canvas class="level-preview" width="180" height="120"></canvas>
+            <div class="level-card-label">Forest Trail</div>
+            <div class="level-card-sub">Trees, trails &amp; fresh air</div>
+          </button>
+          <button class="level-card" data-level="C">
+            <canvas class="level-preview" width="180" height="120"></canvas>
+            <div class="level-card-label">Sunny Desert</div>
+            <div class="level-card-sub">Golden sand &amp; warm breeze</div>
+          </button>
+          <button class="level-card" data-level="D">
+            <canvas class="level-preview" width="180" height="120"></canvas>
+            <div class="level-card-label">Marshland</div>
+            <div class="level-card-sub">Frogs, reeds &amp; squishy mud</div>
+          </button>
+          <button class="level-card" data-level="E">
+            <canvas class="level-preview" width="180" height="120"></canvas>
+            <div class="level-card-label">Ocean Drive</div>
+            <div class="level-card-sub">Beach waves &amp; salty air</div>
+          </button>
+          <button class="level-card" data-level="F">
+            <canvas class="level-preview" width="180" height="120"></canvas>
+            <div class="level-card-label">Snowy Peaks</div>
+            <div class="level-card-sub">Sparkly ice &amp; chilly fun</div>
+          </button>
+          <button class="level-card" data-level="G">
+            <canvas class="level-preview" width="180" height="120"></canvas>
+            <div class="level-card-label">Coastal Highway</div>
+            <div class="level-card-sub">Cliffs, coast &amp; sunshine</div>
+          </button>
+          <button class="level-card" data-level="H">
+            <canvas class="level-preview" width="180" height="120"></canvas>
+            <div class="level-card-label">Meadow Loop</div>
+            <div class="level-card-sub">Rolling hills &amp; wildflowers</div>
+          </button>
+          <button type="button" class="level-card level-card-ds" data-level="DS">
+            <canvas class="level-preview" width="180" height="120"></canvas>
+            <div class="level-card-label">Star Canyon</div>
+            <div class="level-card-sub">Night sky dash</div>
+          </button>
+        </div>
+        <button type="button" id="btn-level-back" class="btn" style="margin-top:1rem">Back</button>
+      </div>
+
+      <!-- Legacy secret modes removed for kids build -->
+      <div id="godzilla-hud" class="godzilla-hud hidden" aria-hidden="true"></div>
+      <div id="godzilla-score" class="overlay panel hidden" aria-hidden="true"></div>
+
+      <div id="debug-panel" class="debug-panel">
+        <button type="button" id="btn-debug-toggle" class="btn-debug-toggle">DEBUG - ADMIN ONLY</button>
+        <div id="debug-tools" class="debug-tools hidden">
+          <button type="button" id="btn-dev-skip" class="debug-btn" title="Skip to last 10s">&#9193; Skip to Finish</button>
+          <button type="button" id="btn-unstick" class="debug-btn" title="Stuck? Click to force-resume the run">Skip / Unstick</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="summit-booth-back-wrap"
+      class="summit-booth-dock hidden"
+      aria-hidden="true"
+    ></div>
+
+    <script type="module" src="./src/main.js"></script>
+
+  </body>
+</html>

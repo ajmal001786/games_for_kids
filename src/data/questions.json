@@ -1,1348 +1,1560 @@
 [
   {
     "id": 1,
-    "category": "basics",
-    "prompt": "What does state: present usually mean in Ansible?",
-    "options": ["Delete the resource", "Ensure it exists", "Pause the playbook", "Restart the host"],
-    "answer": 1,
-    "explanation": "state: present usually ensures the target resource exists."
+    "level": "easy",
+    "category": "Money",
+    "prompt": "What is money mostly used for?",
+    "options": [
+      "Buying things we need",
+      "Eating it",
+      "Throwing it away"
+    ],
+    "answer": 0,
+    "explanation": "We use money to buy food, clothes, and other things we need."
   },
   {
     "id": 2,
-    "category": "basics",
-    "prompt": "What is the language Ansible Playbooks are written in?",
-    "options": ["JSON", "YAML", "XML", "TOML"],
+    "level": "easy",
+    "category": "Money",
+    "prompt": "If you get €2 pocket money, what is a smart first step?",
+    "options": [
+      "Hide it forever",
+      "Think before you spend",
+      "Give it to a stranger online"
+    ],
     "answer": 1,
-    "explanation": "Ansible playbooks are written in YAML (YAML Ain't Markup Language)."
+    "explanation": "Thinking before you spend helps your money last."
   },
   {
     "id": 3,
-    "category": "inventory",
-    "prompt": "What is an inventory in Ansible?",
-    "options": ["A list of managed hosts and groups", "A package manager", "A log file", "A backup archive"],
+    "level": "easy",
+    "category": "Money",
+    "prompt": "Which is a need?",
+    "options": [
+      "Healthy lunch",
+      "A hundred toys today"
+    ],
     "answer": 0,
-    "explanation": "Inventory defines the hosts and groups Ansible manages."
+    "explanation": "Needs are things like food and shelter that keep us healthy and safe."
   },
   {
     "id": 4,
-    "category": "modules",
-    "prompt": "What is a module in Ansible?",
-    "options": ["A dashboard theme", "A unit of work Ansible executes", "A Linux service account", "A license file"],
-    "answer": 1,
-    "explanation": "Modules are the building blocks Ansible uses to perform tasks."
+    "level": "easy",
+    "category": "Money",
+    "prompt": "Which is a want?",
+    "options": [
+      "Extra candy every hour",
+      "Warm shoes in winter"
+    ],
+    "answer": 0,
+    "explanation": "Wants are extras we enjoy but do not always need right away."
   },
   {
     "id": 5,
-    "category": "services",
-    "prompt": "Which module is commonly used to manage services?",
-    "options": ["ansible.builtin.copy", "ansible.builtin.user", "ansible.builtin.service", "ansible.builtin.debug"],
-    "answer": 2,
-    "explanation": "The ansible.builtin.service module is commonly used to manage services."
+    "level": "easy",
+    "category": "Money",
+    "prompt": "Saving means…",
+    "options": [
+      "Spending everything today",
+      "Keeping some money for later",
+      "Losing your coins"
+    ],
+    "answer": 1,
+    "explanation": "Saving helps you buy bigger goals later."
   },
   {
     "id": 6,
-    "category": "packages",
-    "prompt": "Which Ansible module is commonly used to install packages on RHEL-based systems?",
-    "options": ["ansible.builtin.apt", "ansible.builtin.dnf", "ansible.builtin.pip", "community.general.npm"],
+    "level": "easy",
+    "category": "Money",
+    "prompt": "If something costs €5 and you have €3, you…",
+    "options": [
+      "Can buy it without counting",
+      "Need €2 more",
+      "Get it free"
+    ],
     "answer": 1,
-    "explanation": "The ansible.builtin.dnf module is the standard package manager for RHEL-based systems."
+    "explanation": "You need enough money to pay the full price."
   },
   {
     "id": 7,
-    "category": "idempotency",
-    "prompt": "An operation is ___ if the result of performing it once is exactly the same as performing it repeatedly.",
-    "options": ["concurrent", "idempotent", "asynchronous", "recursive"],
-    "answer": 1,
-    "explanation": "Idempotency means repeated runs converge safely toward the same result."
+    "level": "easy",
+    "category": "Money",
+    "prompt": "A piggy bank is for…",
+    "options": [
+      "Storing saved money",
+      "Cooking soup",
+      "Racing cars"
+    ],
+    "answer": 0,
+    "explanation": "Piggy banks are a fun way to save coins."
   },
   {
     "id": 8,
-    "category": "templating",
-    "prompt": "What is the preferred templating language of the ansible.builtin.template module?",
-    "options": ["Mako", "Jinja2", "ERB", "Mustache"],
+    "level": "easy",
+    "category": "Money",
+    "prompt": "Sharing fairly might mean…",
+    "options": [
+      "Taking everything",
+      "Splitting snacks or turns",
+      "Hiding all the snacks"
+    ],
     "answer": 1,
-    "explanation": "Jinja2 is the templating engine used by Ansible for variables, templates, and expressions."
+    "explanation": "Fair sharing helps everyone feel included."
   },
   {
     "id": 9,
-    "category": "facts",
-    "prompt": "___ are things discovered about remote nodes, most commonly gathered at the beginning of a play.",
-    "options": ["Roles", "Facts", "Handlers", "Inventories"],
+    "level": "medium",
+    "category": "Money",
+    "prompt": "You want a €12 book and save €3 each week. About how many weeks to afford it?",
+    "options": [
+      "1 week",
+      "4 weeks",
+      "20 weeks"
+    ],
     "answer": 1,
-    "explanation": "Facts are discovered host data such as OS, interfaces, memory, and more."
+    "explanation": "€3 × 4 weeks ≈ €12, so about four weeks."
   },
   {
     "id": 10,
-    "category": "handlers",
-    "prompt": "What is the Ansible keyword to signify a handler should be run?",
-    "options": ["trigger", "notify", "signal", "invoke"],
+    "level": "medium",
+    "category": "Money",
+    "prompt": "Which helps you compare prices?",
+    "options": [
+      "Closing your eyes",
+      "Looking at price tags",
+      "Guessing randomly"
+    ],
     "answer": 1,
-    "explanation": "The notify keyword triggers a handler when a task reports a change."
+    "explanation": "Price tags help you choose wisely."
   },
   {
     "id": 11,
-    "category": "basics",
-    "prompt": "What unique property of Ansible allows it to automate network infrastructure so well?",
-    "options": ["Requires a Java agent", "Agentless architecture", "Uses SNMP traps only", "Needs root SSH keys"],
-    "answer": 1,
-    "explanation": "Ansible is agentless — it requires no software to be installed on managed nodes."
+    "level": "medium",
+    "category": "Money",
+    "prompt": "A budget is…",
+    "options": [
+      "A plan for spending and saving",
+      "A type of shoe",
+      "A racing move"
+    ],
+    "answer": 0,
+    "explanation": "A budget is a simple plan for your money."
   },
   {
     "id": 12,
-    "category": "collections",
-    "prompt": "You can package and distribute playbooks, roles, modules, and plugins using what?",
-    "options": ["Ansible tarball", "Ansible content collection", "Ansible RPM", "Ansible snap"],
+    "level": "medium",
+    "category": "Money",
+    "prompt": "If you lend a friend €2, a good rule is…",
+    "options": [
+      "Never mention it again",
+      "Agree when they will pay you back",
+      "Lend €100 more"
+    ],
     "answer": 1,
-    "explanation": "Ansible content collections are the standard way to package and distribute Ansible content."
+    "explanation": "Clear agreements keep friendships happy."
   },
   {
     "id": 13,
-    "category": "community",
-    "prompt": "What is the name of the online server for finding and sharing Ansible community content?",
-    "options": ["Ansible Hub", "Ansible Galaxy", "Ansible Forge", "Ansible Registry"],
+    "level": "medium",
+    "category": "Money",
+    "prompt": "Buying used or borrowing can…",
+    "options": [
+      "Always be bad",
+      "Save money for other goals",
+      "Make money disappear"
+    ],
     "answer": 1,
-    "explanation": "Ansible Galaxy is the community hub for sharing roles, collections, and plugins."
+    "explanation": "Reusing items can be smart and eco-friendly."
   },
   {
     "id": 14,
-    "category": "conditionals",
-    "prompt": "What is the keyword for a conditional statement attached to a task in an Ansible Playbook?",
-    "options": ["if", "when", "unless", "condition"],
+    "level": "medium",
+    "category": "Money",
+    "prompt": "Sales can be helpful if you…",
+    "options": [
+      "Buy only because it says SALE",
+      "Still ask if you need the item",
+      "Buy ten of everything"
+    ],
     "answer": 1,
-    "explanation": "The 'when' keyword is used to conditionally execute tasks."
+    "explanation": "A good deal is only good if you need it."
   },
   {
     "id": 15,
-    "category": "testing",
-    "prompt": "What mode does not make any changes on remote systems, but only outputs the changes that might occur?",
-    "options": ["dry-run mode", "check mode", "verbose mode", "preview mode"],
+    "level": "medium",
+    "category": "Money",
+    "prompt": "Charity means…",
+    "options": [
+      "Keeping every coin forever",
+      "Giving some money or time to help others",
+      "Throwing coins in the trash"
+    ],
     "answer": 1,
-    "explanation": "Check mode (--check) simulates changes without actually applying them."
+    "explanation": "Giving can help people in need."
   },
   {
     "id": 16,
-    "category": "collections",
-    "prompt": "What does the acronym FQCN stand for?",
-    "options": ["Fully Qualified Collection Name", "Fast Query Configuration Node", "Federated Queue Control Network", "File-based Query Cache Namespace"],
+    "level": "medium",
+    "category": "Money",
+    "prompt": "If you lose your wallet, you should…",
+    "options": [
+      "Tell a trusted adult right away",
+      "Say nothing",
+      "Blame a friend"
+    ],
     "answer": 0,
-    "explanation": "FQCN stands for Fully Qualified Collection Name, e.g. ansible.builtin.copy."
+    "explanation": "A trusted adult can help you look and stay safe."
   },
   {
     "id": 17,
-    "category": "documentation",
-    "prompt": "Ansible can use facts to create ___ which functions as a live, managed-as-code center of knowledge.",
-    "options": ["static inventory", "dynamic documentation", "backup manifests", "compliance reports"],
+    "level": "hard",
+    "category": "Money",
+    "prompt": "Interest on savings means the bank may…",
+    "options": [
+      "Eat your money",
+      "Add a little extra over time",
+      "Charge you for breathing"
+    ],
     "answer": 1,
-    "explanation": "Dynamic documentation uses live facts to create real-time, data-centric infrastructure knowledge."
+    "explanation": "Banks sometimes pay interest so savings grow slowly."
   },
   {
     "id": 18,
-    "category": "tools",
-    "prompt": "Which TUI program allows you to run Ansible Playbooks in an execution environment?",
-    "options": ["ansible-console", "ansible-navigator", "ansible-runner", "ansible-shell"],
+    "level": "hard",
+    "category": "Money",
+    "prompt": "Opportunity cost means…",
+    "options": [
+      "Money is free",
+      "Choosing one thing means giving up another",
+      "Coins are heavy"
+    ],
     "answer": 1,
-    "explanation": "ansible-navigator provides a text user interface for running playbooks in execution environments."
+    "explanation": "Every choice has a trade-off."
   },
   {
     "id": 19,
-    "category": "roles",
-    "prompt": "Which Ansible feature allows you to organize complex playbooks into reusable components?",
-    "options": ["Modules", "Roles", "Plugins", "Callbacks"],
-    "answer": 1,
-    "explanation": "Roles let you organize tasks, handlers, variables, and files into a reusable directory structure."
+    "level": "hard",
+    "category": "Money",
+    "prompt": "A scam online might ask you to…",
+    "options": [
+      "Share passwords or send money fast",
+      "Eat vegetables",
+      "Do homework"
+    ],
+    "answer": 0,
+    "explanation": "Scammers rush you — tell an adult if unsure."
   },
   {
     "id": 20,
-    "category": "modules",
-    "prompt": "What language are the Ansible Windows modules written in?",
-    "options": ["Bash", "PowerShell", "Python", "C#"],
+    "level": "hard",
+    "category": "Money",
+    "prompt": "Needs before wants helps you…",
+    "options": [
+      "Run out of money faster",
+      "Cover important things first",
+      "Buy only candy"
+    ],
     "answer": 1,
-    "explanation": "Ansible Windows modules are written in PowerShell to run natively on Windows systems."
+    "explanation": "Cover needs first, then plan for wants."
   },
   {
     "id": 21,
-    "category": "platform",
-    "prompt": "What company owns the product Ansible Automation Platform?",
-    "options": ["Microsoft", "Red Hat", "Canonical", "HashiCorp"],
-    "answer": 1,
-    "explanation": "Red Hat develops and maintains Ansible Automation Platform."
+    "level": "hard",
+    "category": "Money",
+    "prompt": "Comparing unit prices (per kg or per item) helps you…",
+    "options": [
+      "Pick the better value",
+      "Spend more",
+      "Ignore labels"
+    ],
+    "answer": 0,
+    "explanation": "Unit prices show which size is a better deal."
   },
   {
     "id": 22,
-    "category": "platform",
-    "prompt": "What technology allows Ansible Automation Platform to distribute automation across an execution plane?",
-    "options": ["Ansible Tower", "Automation mesh", "Ansible Bridge", "Task broker"],
+    "level": "hard",
+    "category": "Money",
+    "prompt": "If you earn €20 mowing lawns, tracking income in a notebook…",
+    "options": [
+      "Is useless",
+      "Shows what you earned and spent",
+      "Makes money vanish"
+    ],
     "answer": 1,
-    "explanation": "Automation mesh distributes automation execution across a scalable, resilient network."
+    "explanation": "Tracking helps you learn money habits early."
   },
   {
     "id": 23,
-    "category": "platform",
-    "prompt": "You can install Red Hat Ansible Automation Platform on RHEL and what other platform?",
-    "options": ["Ubuntu", "Red Hat OpenShift", "AWS Lambda", "Windows Server"],
+    "level": "hard",
+    "category": "Money",
+    "prompt": "Inflation means prices over time often…",
+    "options": [
+      "Go down to zero",
+      "Go up slowly",
+      "Stay exactly the same forever"
+    ],
     "answer": 1,
-    "explanation": "Ansible Automation Platform can be installed on RHEL or deployed on Red Hat OpenShift."
+    "explanation": "That is why saving and planning matter."
   },
   {
     "id": 24,
-    "category": "tools",
-    "prompt": "What is the name of the tool that packages Ansible content into a container image?",
-    "options": ["ansible-container", "ansible-builder", "ansible-packager", "ansible-docker"],
+    "level": "hard",
+    "category": "Money",
+    "prompt": "A goal like 'save €30 for a game' is easier if you…",
+    "options": [
+      "Never count progress",
+      "Break it into weekly amounts",
+      "Spend it all Friday"
+    ],
     "answer": 1,
-    "explanation": "ansible-builder creates container images (execution environments) for running Ansible."
+    "explanation": "Small steps make big goals reachable."
   },
   {
     "id": 25,
-    "category": "platform",
-    "prompt": "In Ansible Automation Platform, Ansible is executed in what type of container?",
-    "options": ["Sidecar container", "Execution environment", "Init container", "Pod sandbox"],
+    "level": "easy",
+    "category": "Safety",
+    "prompt": "Before crossing a street you should…",
+    "options": [
+      "Run without looking",
+      "Stop, look, and listen",
+      "Close your eyes"
+    ],
     "answer": 1,
-    "explanation": "Execution environments are containerized images with Ansible, collections, and dependencies."
+    "explanation": "Look both ways and listen for traffic."
   },
   {
     "id": 26,
-    "category": "variables",
-    "prompt": "What type of variable always wins (has the most precedence) in Ansible variable precedence?",
-    "options": ["Role defaults", "Extra vars", "Host vars", "Group vars"],
+    "level": "easy",
+    "category": "Safety",
+    "prompt": "If a stranger offers you candy, you should…",
+    "options": [
+      "Go with them",
+      "Say no and tell a trusted adult",
+      "Take the candy quietly"
+    ],
     "answer": 1,
-    "explanation": "Extra vars (-e / --extra-vars) have the highest precedence and override everything."
+    "explanation": "Never go with strangers — tell an adult."
   },
   {
     "id": 27,
-    "category": "collections",
-    "prompt": "What is the namespace for Ansible modules and plugins that are included with ansible-core?",
-    "options": ["core.ansible", "ansible.builtin", "ansible.core", "redhat.ansible"],
+    "level": "easy",
+    "category": "Safety",
+    "prompt": "Helmets are worn to…",
+    "options": [
+      "Look silly",
+      "Protect your head",
+      "Make you slower"
+    ],
     "answer": 1,
-    "explanation": "ansible.builtin is the namespace for all modules and plugins shipped with ansible-core."
+    "explanation": "Helmets protect your head when biking or skating."
   },
   {
     "id": 28,
-    "category": "tools",
-    "prompt": "Which tool allows users to identify and correct stylistic errors and anti-patterns in Ansible?",
-    "options": ["ansible-test", "ansible-lint", "ansible-check", "ansible-validate"],
+    "level": "easy",
+    "category": "Safety",
+    "prompt": "If you smell smoke at home, you should…",
+    "options": [
+      "Hide under the bed",
+      "Tell an adult and leave safely",
+      "Light a match"
+    ],
     "answer": 1,
-    "explanation": "ansible-lint checks playbooks for practices and behaviors that could be improved."
+    "explanation": "Leave the area and get adult help fast."
   },
   {
     "id": 29,
-    "category": "tools",
-    "prompt": "What common IDE does Red Hat support with an Ansible Plugin for creating playbooks?",
-    "options": ["Vim", "Visual Studio Code", "Eclipse", "IntelliJ IDEA"],
+    "level": "easy",
+    "category": "Safety",
+    "prompt": "Seat belts in a car…",
+    "options": [
+      "Are optional fun ribbons",
+      "Keep you safer in a crash",
+      "Are only for grown-ups"
+    ],
     "answer": 1,
-    "explanation": "Red Hat provides an official Ansible extension for Visual Studio Code."
+    "explanation": "Everyone should buckle up properly."
   },
   {
     "id": 30,
-    "category": "security",
-    "prompt": "What AAP feature allows you to validate that project files have not been tampered with?",
-    "options": ["ansible-vault", "Content signing (ansible-sign)", "SELinux policies", "Checksum module"],
+    "level": "easy",
+    "category": "Safety",
+    "prompt": "Never share online…",
+    "options": [
+      "Your favorite color",
+      "Your full name, address, or passwords",
+      "A joke with family"
+    ],
     "answer": 1,
-    "explanation": "Content signing via ansible-sign validates the integrity of project files."
+    "explanation": "Personal details stay private online."
   },
   {
     "id": 31,
-    "category": "loops",
-    "prompt": "What type of loop would you use in an Ansible Playbook to retry a task until it completes successfully?",
-    "options": ["loop", "until", "with_items", "retry"],
+    "level": "easy",
+    "category": "Safety",
+    "prompt": "If you get lost in a store, you should…",
+    "options": [
+      "Run outside alone",
+      "Find a worker or checkout and ask for help",
+      "Cry in a corner forever"
+    ],
     "answer": 1,
-    "explanation": "The 'until' keyword retries a task until a condition is met or max retries are exhausted."
+    "explanation": "Store staff can help you find your adult."
   },
   {
     "id": 32,
-    "category": "modules",
-    "prompt": "What Ansible module can be used to check if given expressions are true with an optional custom message?",
-    "options": ["ansible.builtin.fail", "ansible.builtin.assert", "ansible.builtin.debug", "ansible.builtin.validate"],
+    "level": "easy",
+    "category": "Safety",
+    "prompt": "Hot stoves and irons can…",
+    "options": [
+      "Give hugs",
+      "Burn you — stay back",
+      "Cool your hands"
+    ],
     "answer": 1,
-    "explanation": "ansible.builtin.assert evaluates expressions and fails the task if they are not true."
+    "explanation": "Hot surfaces can hurt — ask an adult for help."
   },
   {
     "id": 33,
-    "category": "loops",
-    "prompt": "What keyword can you use to loop over a list or dictionary with an Ansible module?",
-    "options": ["foreach", "loop", "iterate", "repeat"],
+    "level": "medium",
+    "category": "Safety",
+    "prompt": "A fire drill at school teaches you to…",
+    "options": [
+      "Ignore alarms",
+      "Leave calmly and follow the plan",
+      "Hide your phone"
+    ],
     "answer": 1,
-    "explanation": "The 'loop' keyword iterates over a list, replacing the older with_items syntax."
+    "explanation": "Drills help everyone know what to do."
   },
   {
     "id": 34,
-    "category": "history",
-    "prompt": "What year was Ansible created?",
-    "options": ["2009", "2012", "2015", "2010"],
+    "level": "medium",
+    "category": "Safety",
+    "prompt": "Poison symbols on bottles mean…",
+    "options": [
+      "Drink it fast",
+      "Do not eat or drink — tell an adult",
+      "It is juice"
+    ],
     "answer": 1,
-    "explanation": "Ansible was created by Michael DeHaan and first released in 2012."
+    "explanation": "Cleaning products are not food."
   },
   {
     "id": 35,
-    "category": "community",
-    "prompt": "What is the premier annual conference where Ansible and Red Hat automation are showcased?",
-    "options": ["AnsibleCon", "KubeCon", "AutomateCon", "Red Hat Summit"],
-    "answer": 3,
-    "explanation": "Red Hat Summit is the premier event for Red Hat technologies including Ansible Automation Platform."
+    "level": "medium",
+    "category": "Safety",
+    "prompt": "If someone bullies you online, you should…",
+    "options": [
+      "Reply with mean messages",
+      "Save evidence and tell a trusted adult",
+      "Share your password"
+    ],
+    "answer": 1,
+    "explanation": "Adults can help stop cyberbullying."
   },
   {
     "id": 36,
-    "category": "modules",
-    "prompt": "What Ansible module will test connectivity from a control node to a managed Linux system?",
-    "options": ["ansible.builtin.ping", "ansible.builtin.wait_for", "ansible.builtin.uri", "ansible.builtin.command"],
-    "answer": 0,
-    "explanation": "ansible.builtin.ping verifies a usable Python and connectivity on the managed node."
+    "level": "medium",
+    "category": "Safety",
+    "prompt": "Swimming alone without a lifeguard or adult is…",
+    "options": [
+      "Always fine",
+      "Not safe",
+      "Required for champions"
+    ],
+    "answer": 1,
+    "explanation": "Swim with supervision and a buddy."
   },
   {
     "id": 37,
-    "category": "performance",
-    "prompt": "What can you increase on your Ansible control node to allow more parallelism?",
-    "options": ["Timeout", "Forks", "Retries", "Verbosity"],
-    "answer": 1,
-    "explanation": "The forks setting controls how many hosts Ansible manages in parallel (default is 5)."
+    "level": "medium",
+    "category": "Safety",
+    "prompt": "If a friend dares you to do something dangerous, you can…",
+    "options": [
+      "Say no and suggest something safer",
+      "Do it to be cool",
+      "Keep it secret"
+    ],
+    "answer": 0,
+    "explanation": "Real friends respect your safety."
+  },
+  {
+    "id": 38,
+    "level": "medium",
+    "category": "Safety",
+    "prompt": "Emergency number in many European countries is…",
+    "options": [
+      "999 or 112",
+      "0",
+      "Your friend’s number"
+    ],
+    "answer": 0,
+    "explanation": "Know local emergency numbers with your family."
   },
   {
     "id": 39,
-    "category": "blocks",
-    "prompt": "What Ansible feature allows you to group tasks and apply conditionals to the same set of tasks?",
-    "options": ["Roles", "Blocks", "Includes", "Tags"],
+    "level": "medium",
+    "category": "Safety",
+    "prompt": "Wearing bright clothes at dusk while biking…",
+    "options": [
+      "Makes you invisible",
+      "Helps drivers see you",
+      "Is only for races"
+    ],
     "answer": 1,
-    "explanation": "Blocks group tasks together and can share conditionals, error handling, and other directives."
+    "explanation": "Being visible keeps you safer."
   },
   {
     "id": 40,
-    "category": "blocks",
-    "prompt": "Which task directive will NOT work on blocks?",
-    "options": ["when", "loop", "rescue", "become"],
+    "level": "medium",
+    "category": "Safety",
+    "prompt": "If a dog you do not know runs up, you should…",
+    "options": [
+      "Scream and run wildly",
+      "Stand still, avoid eye contact, tell an adult",
+      "Pull its tail"
+    ],
     "answer": 1,
-    "explanation": "The 'loop' directive cannot be applied to a block — only to individual tasks."
+    "explanation": "Stay calm and get adult help."
   },
   {
     "id": 41,
-    "category": "blocks",
-    "prompt": "What feature allows a block to recover from task errors?",
-    "options": ["retry", "rescue", "fallback", "recover"],
+    "level": "hard",
+    "category": "Safety",
+    "prompt": "Consent means…",
+    "options": [
+      "You must always say yes",
+      "You can choose yes or no about your body",
+      "Only adults decide"
+    ],
     "answer": 1,
-    "explanation": "The 'rescue' section within a block runs tasks when an error occurs in the block."
+    "explanation": "Your body belongs to you — you can say no."
   },
   {
     "id": 42,
-    "category": "error_handling",
-    "prompt": "What task directive allows you to continue despite a task failure?",
-    "options": ["force_continue", "ignore_errors", "skip_on_fail", "allow_failure"],
+    "level": "hard",
+    "category": "Safety",
+    "prompt": "Phishing emails often try to…",
+    "options": [
+      "Give you free homework",
+      "Trick you into clicking bad links",
+      "Teach swimming"
+    ],
     "answer": 1,
-    "explanation": "Setting ignore_errors: true lets a playbook continue even if that task fails."
+    "explanation": "Do not click suspicious links — ask an adult."
   },
   {
     "id": 43,
-    "category": "error_handling",
-    "prompt": "What task directive lets you define what 'failure' means for a task?",
-    "options": ["error_when", "failed_when", "failure_condition", "fail_if"],
+    "level": "hard",
+    "category": "Safety",
+    "prompt": "If someone pressures you to keep a 'secret' that feels wrong…",
+    "options": [
+      "Keep it forever",
+      "Tell a trusted adult",
+      "Post it online"
+    ],
     "answer": 1,
-    "explanation": "failed_when lets you customize the conditions under which Ansible considers a task failed."
+    "explanation": "Unsafe secrets should be shared with adults."
   },
   {
     "id": 44,
-    "category": "variables",
-    "prompt": "What task directive allows you to store the result of a task to a variable?",
-    "options": ["set_fact", "register", "store", "capture"],
+    "level": "hard",
+    "category": "Safety",
+    "prompt": "First aid for a small cut includes…",
+    "options": [
+      "Rub dirt in it",
+      "Clean and cover with a bandage",
+      "Ignore bleeding"
+    ],
     "answer": 1,
-    "explanation": "The 'register' keyword saves the return data of a task into a named variable."
+    "explanation": "Clean cuts and cover them to prevent infection."
   },
   {
     "id": 45,
-    "category": "strategy",
-    "prompt": "The default strategy in Ansible is linear. What strategy lets each host run to the end of the play as fast as it can?",
-    "options": ["parallel", "free", "async", "burst"],
+    "level": "hard",
+    "category": "Safety",
+    "prompt": "During a thunderstorm outside, you should…",
+    "options": [
+      "Stand under a lone tree",
+      "Go indoors or a car if possible",
+      "Hold a metal pole high"
+    ],
     "answer": 1,
-    "explanation": "The 'free' strategy allows each host to proceed through tasks independently at its own pace."
+    "explanation": "Lightning is dangerous — get inside."
   },
   {
     "id": 46,
-    "category": "basics",
-    "prompt": "What character indicates a comment in an Ansible Playbook?",
-    "options": ["//", "#", "/*", "--"],
-    "answer": 1,
-    "explanation": "The # (hash) character begins a comment in YAML and Ansible Playbooks."
+    "level": "hard",
+    "category": "Safety",
+    "prompt": "A trusted adult for safety does NOT include…",
+    "options": [
+      "A random online gamer you just met",
+      "Your parent or teacher",
+      "A school counselor"
+    ],
+    "answer": 0,
+    "explanation": "Trust is built over time in real life."
   },
   {
     "id": 47,
-    "category": "security",
-    "prompt": "What Ansible tool allows you to encrypt variables and files?",
-    "options": ["ansible-crypt", "ansible-vault", "ansible-encrypt", "ansible-gpg"],
+    "level": "hard",
+    "category": "Safety",
+    "prompt": "If you ride a bike at night, you need…",
+    "options": [
+      "No lights",
+      "Lights and reflectors",
+      "Only sunglasses"
+    ],
     "answer": 1,
-    "explanation": "ansible-vault encrypts sensitive data such as passwords, keys, and variable files."
+    "explanation": "Lights help others see you."
   },
   {
     "id": 48,
-    "category": "tools",
-    "prompt": "What command-line tool is used to display or dump the configured inventory as Ansible sees it?",
-    "options": ["ansible-config", "ansible-inventory", "ansible-doc", "ansible-hosts"],
+    "level": "hard",
+    "category": "Safety",
+    "prompt": "Gas smell in the house means…",
+    "options": [
+      "Light a candle",
+      "Leave and tell an adult to call for help",
+      "Open the oven"
+    ],
     "answer": 1,
-    "explanation": "ansible-inventory displays, graphs, or dumps the inventory in various formats."
+    "explanation": "Gas leaks are serious — get out and tell adults."
   },
   {
     "id": 49,
-    "category": "platform",
-    "prompt": "What types of Ansible content can you get from Automation Hub?",
-    "options": ["Community and nightly", "Certified and validated", "Open source only", "Beta and stable"],
+    "level": "easy",
+    "category": "Kindness",
+    "prompt": "If a classmate drops their books, you can…",
+    "options": [
+      "Laugh",
+      "Help pick them up",
+      "Walk away"
+    ],
     "answer": 1,
-    "explanation": "Automation Hub provides Red Hat certified and validated Ansible content collections."
+    "explanation": "Small helps make big smiles."
   },
   {
     "id": 50,
-    "category": "collections",
-    "prompt": "What is the FQCN for the Cisco IOS-XE content collection?",
-    "options": ["cisco.iosxe", "cisco.ios", "network.cisco", "cisco.nxos"],
+    "level": "easy",
+    "category": "Kindness",
+    "prompt": "Saying 'please' and 'thank you' is…",
+    "options": [
+      "Rude",
+      "Polite and kind",
+      "Only for teachers"
+    ],
     "answer": 1,
-    "explanation": "cisco.ios is the Fully Qualified Collection Name for managing Cisco IOS and IOS-XE devices."
+    "explanation": "Good manners show respect."
   },
   {
     "id": 51,
-    "category": "ai",
-    "prompt": "What AI feature helps users create Ansible Playbooks within Visual Studio Code?",
-    "options": ["Red Hat Copilot", "Automation code assistant", "Ansible AI Assist", "Automation Advisor"],
+    "level": "easy",
+    "category": "Kindness",
+    "prompt": "Including someone sitting alone at lunch…",
+    "options": [
+      "Is weird",
+      "Can make them feel welcome",
+      "Is against rules"
+    ],
     "answer": 1,
-    "explanation": "Automation code assistant (formerly Ansible Lightspeed) generates Ansible task recommendations in VS Code."
+    "explanation": "Everyone likes to feel included."
   },
   {
     "id": 52,
-    "category": "advanced",
-    "prompt": "What Ansible keyword saves time when you frequently call the same module with the same arguments?",
-    "options": ["defaults", "module_defaults", "common_args", "task_defaults"],
+    "level": "easy",
+    "category": "Kindness",
+    "prompt": "If you hurt someone's feelings, you should…",
+    "options": [
+      "Pretend it did not happen",
+      "Apologize sincerely",
+      "Blame them"
+    ],
     "answer": 1,
-    "explanation": "module_defaults sets default parameters for specific modules across an entire play or block."
+    "explanation": "A real apology can fix hurt feelings."
   },
   {
     "id": 53,
-    "category": "testing",
-    "prompt": "How do you check for syntax errors before running an Ansible Playbook?",
-    "options": ["ansible-playbook --dry-run", "ansible-playbook --syntax-check", "ansible-lint --parse", "ansible-check playbook.yml"],
+    "level": "easy",
+    "category": "Kindness",
+    "prompt": "Sharing crayons when a friend has none is…",
+    "options": [
+      "Unfair to you always",
+      "A kind choice",
+      "Impossible"
+    ],
     "answer": 1,
-    "explanation": "The --syntax-check flag validates playbook syntax without executing any tasks."
+    "explanation": "Sharing tools helps everyone create."
   },
   {
     "id": 54,
-    "category": "variables",
-    "prompt": "What type of variable is inventory_hostname considered?",
-    "options": ["Host var", "Magic variable", "Group var", "Extra var"],
+    "level": "easy",
+    "category": "Kindness",
+    "prompt": "Calling someone mean nicknames is…",
+    "options": [
+      "Funny always",
+      "Unkind and can be bullying",
+      "Required"
+    ],
     "answer": 1,
-    "explanation": "inventory_hostname is a magic variable automatically set by Ansible for each host."
+    "explanation": "Use names people like to be called."
   },
   {
     "id": 55,
-    "category": "variables",
-    "prompt": "What magic variable allows you to skip an option in a task, leaving it unset?",
-    "options": ["undefined", "omit", "none", "skip"],
+    "level": "easy",
+    "category": "Kindness",
+    "prompt": "Complimenting a friend's effort…",
+    "options": [
+      "Is embarrassing always",
+      "Can encourage them",
+      "Makes you weaker"
+    ],
     "answer": 1,
-    "explanation": "The special 'omit' variable removes a parameter entirely when used with a default filter."
+    "explanation": "Kind words build confidence."
   },
   {
     "id": 56,
-    "category": "network",
-    "prompt": "What variable indicates which network operating system a managed host is running?",
-    "options": ["ansible_os_family", "ansible_network_os", "ansible_distribution", "ansible_platform"],
+    "level": "easy",
+    "category": "Kindness",
+    "prompt": "Listening when a friend talks means…",
+    "options": [
+      "Planning your reply only",
+      "Paying attention to them",
+      "Looking at your phone"
+    ],
     "answer": 1,
-    "explanation": "ansible_network_os identifies the network platform (e.g. cisco.ios.ios, arista.eos.eos)."
+    "explanation": "Good listening shows you care."
   },
   {
     "id": 57,
-    "category": "variables",
-    "prompt": "What magic variable contains the path to the directory of the currently running playbook?",
-    "options": ["ansible_playbook_path", "playbook_dir", "ansible_base_dir", "play_path"],
+    "level": "medium",
+    "category": "Kindness",
+    "prompt": "Empathy means…",
+    "options": [
+      "Ignoring feelings",
+      "Trying to understand how others feel",
+      "Winning every game"
+    ],
     "answer": 1,
-    "explanation": "playbook_dir is a magic variable that resolves to the directory containing the playbook."
+    "explanation": "Empathy helps us treat people well."
   },
-
   {
     "id": 58,
-    "category": "ansible-creator",
-    "prompt": "What is the primary purpose of ansible-creator?",
-    "options": ["To run Ansible playbooks in parallel", "To scaffold new Ansible collections, roles, and plugins", "To lint YAML files for syntax errors", "To manage container images for Ansible"],
+    "level": "medium",
+    "category": "Kindness",
+    "prompt": "If you see exclusion at recess, you might…",
+    "options": [
+      "Join the mean group",
+      "Invite the left-out person to play",
+      "Film it for laughs"
+    ],
     "answer": 1,
-    "explanation": "ansible-creator scaffolds the directory structure and boilerplate for new Ansible content."
+    "explanation": "One invite can change someone's day."
   },
   {
     "id": 59,
-    "category": "ansible-creator",
-    "prompt": "Which command scaffolds a new collection with ansible-creator?",
-    "options": ["ansible-creator build myns.mycol", "ansible-creator init collection myns.mycol ./src", "ansible-creator new collection myns.mycol", "ansible-galaxy init collection myns.mycol"],
+    "level": "medium",
+    "category": "Kindness",
+    "prompt": "Gossip that spreads rumors…",
+    "options": [
+      "Helps friendships",
+      "Can hurt people",
+      "Is always true"
+    ],
     "answer": 1,
-    "explanation": "ansible-creator init collection creates the full collection skeleton in the specified directory."
+    "explanation": "Rumors can harm reputations and feelings."
   },
   {
     "id": 60,
-    "category": "ansible-creator",
-    "prompt": "What does ansible-creator generate as part of a new collection?",
-    "options": ["A running container with ansible-core pre-installed", "SSH keys for connecting to managed hosts", "The proper directory layout, galaxy.yml, tests, and metadata", "A pre-configured Ansible Tower project"],
-    "answer": 2,
-    "explanation": "ansible-creator generates the standard collection structure including galaxy.yml and test scaffolding."
+    "level": "medium",
+    "category": "Kindness",
+    "prompt": "A sincere apology includes…",
+    "options": [
+      "'Sorry you feel that way' only",
+      "Naming what you did and how you'll do better",
+      "Buying silence"
+    ],
+    "answer": 1,
+    "explanation": "Own your actions and try to improve."
   },
   {
     "id": 61,
-    "category": "ansible-lint",
-    "prompt": "Which command runs ansible-lint against a playbook named site.yml?",
-    "options": ["ansible-playbook --lint site.yml", "ansible-lint site.yml", "ansible check site.yml", "ansible-validator site.yml"],
+    "level": "medium",
+    "category": "Kindness",
+    "prompt": "Standing up kindly for someone being teased…",
+    "options": [
+      "Is never your job",
+      "Can be brave and helpful",
+      "Means fighting"
+    ],
     "answer": 1,
-    "explanation": "Running ansible-lint directly with the playbook file as an argument checks it for issues."
+    "explanation": "Get adult help if needed — kindness matters."
   },
   {
     "id": 62,
-    "category": "ansible-lint",
-    "prompt": "What does ansible-lint typically flag?",
-    "options": ["Network latency issues during playbook execution", "Deprecated modules, risky patterns, and style violations", "Missing SSH keys on managed hosts", "Incorrect inventory group names at runtime"],
+    "level": "medium",
+    "category": "Kindness",
+    "prompt": "If a friend is sad, you can…",
+    "options": [
+      "Tell them to cheer up instantly",
+      "Ask if they want to talk or play",
+      "Ignore them"
+    ],
     "answer": 1,
-    "explanation": "ansible-lint catches deprecated usage, anti-patterns, and violations of Ansible best practices."
+    "explanation": "Offer support without pressure."
   },
   {
     "id": 63,
-    "category": "molecule",
-    "prompt": "What is Molecule primarily used for?",
-    "options": ["Linting Ansible playbooks for style issues", "Full integration testing of Ansible roles and collections", "Building and publishing container images", "Managing secrets and vault passwords"],
+    "level": "medium",
+    "category": "Kindness",
+    "prompt": "Returning something you borrowed…",
+    "options": [
+      "Whenever you feel like it",
+      "On time and in good shape",
+      "Never"
+    ],
     "answer": 1,
-    "explanation": "Molecule provides integration testing for Ansible roles by creating, converging, and verifying instances."
+    "explanation": "Returning items shows respect."
   },
   {
     "id": 64,
-    "category": "molecule",
-    "prompt": "What is the correct Molecule test lifecycle order?",
-    "options": ["dependency → create → prepare → converge → verify → destroy", "build → deploy → test → clean → report", "init → run → check → validate → end", "prepare → execute → assert → teardown → publish"],
-    "answer": 0,
-    "explanation": "Molecule follows dependency, create, prepare, converge, verify, destroy as its full test lifecycle."
+    "level": "medium",
+    "category": "Kindness",
+    "prompt": "Celebrating a friend's success without jealousy is…",
+    "options": [
+      "Impossible",
+      "A sign of maturity",
+      "Weak"
+    ],
+    "answer": 1,
+    "explanation": "Good friends cheer for each other."
   },
   {
     "id": 65,
-    "category": "molecule",
-    "prompt": "Which Molecule command runs only the playbook without the full lifecycle?",
-    "options": ["molecule run", "molecule converge", "molecule apply", "molecule execute"],
-    "answer": 1,
-    "explanation": "molecule converge applies the role to the test instance without running verify or destroy."
+    "level": "hard",
+    "category": "Kindness",
+    "prompt": "Bystander effect means people may not help because…",
+    "options": [
+      "Everyone assumes someone else will act",
+      "Helping is illegal",
+      "Kindness is banned"
+    ],
+    "answer": 0,
+    "explanation": "Be the one who speaks up or gets an adult."
   },
   {
     "id": 66,
-    "category": "ade",
-    "prompt": "What does ade (Ansible Dev Environment) manage?",
-    "options": ["Production deployment pipelines", "Isolated development environments for collections", "Ansible Tower user permissions", "Container orchestration for EEs"],
+    "level": "hard",
+    "category": "Kindness",
+    "prompt": "Microaggressions are…",
+    "options": [
+      "Tiny hugs",
+      "Small comments that can hurt groups of people",
+      "Microphones"
+    ],
     "answer": 1,
-    "explanation": "ade creates and manages isolated development environments for Ansible collection development."
+    "explanation": "Even small words can add up — choose respect."
   },
   {
     "id": 67,
-    "category": "ade",
-    "prompt": "Which command installs a collection in editable mode with ade?",
-    "options": ["ade setup --editable .", "ade install -e .", "ade dev mount .", "pip install -e ansible-collection"],
+    "level": "hard",
+    "category": "Kindness",
+    "prompt": "Forgiveness can mean…",
+    "options": [
+      "Letting harmful behavior continue",
+      "Letting go of anger while staying safe",
+      "Forgetting boundaries"
+    ],
     "answer": 1,
-    "explanation": "ade install -e . installs the collection in editable/development mode for live editing."
+    "explanation": "You can forgive and still set limits."
   },
   {
     "id": 68,
-    "category": "pytest-ansible",
-    "prompt": "What is pytest-ansible?",
-    "options": ["A standalone test runner for Ansible", "A pytest plugin for testing Ansible modules and plugins", "A CI/CD pipeline tool for Ansible projects", "A linter extension for pytest configuration"],
+    "level": "hard",
+    "category": "Kindness",
+    "prompt": "Cultural differences at school should be…",
+    "options": [
+      "Made fun of",
+      "Learned about with curiosity and respect",
+      "Ignored always"
+    ],
     "answer": 1,
-    "explanation": "pytest-ansible is a pytest plugin that provides fixtures for testing Ansible modules and plugins."
+    "explanation": "Diversity makes communities richer."
   },
   {
     "id": 69,
-    "category": "pytest-ansible",
-    "prompt": "What fixture does pytest-ansible provide to call Ansible modules directly?",
-    "options": ["ansible_runner", "ansible_module", "ansible_host", "ansible_exec"],
+    "level": "hard",
+    "category": "Kindness",
+    "prompt": "If kindness and honesty conflict (e.g., surprise party), you…",
+    "options": [
+      "Lie badly",
+      "Balance truth with care — ask an adult if unsure",
+      "Ruin every surprise"
+    ],
     "answer": 1,
-    "explanation": "The ansible_module fixture lets you call Ansible modules directly from pytest test functions."
+    "explanation": "Sometimes we need thoughtful choices."
   },
   {
     "id": 70,
-    "category": "tox-ansible",
-    "prompt": "What does tox-ansible automatically discover?",
-    "options": ["Docker images on the local registry", "Test scenarios across multiple Python and ansible-core versions", "Cloud provider endpoints for deployment", "SSH keys and vault passwords in the project"],
+    "level": "hard",
+    "category": "Kindness",
+    "prompt": "Digital kindness includes…",
+    "options": [
+      "Posting embarrassing photos of friends",
+      "Thinking before you comment or share",
+      "Spamming mean memes"
+    ],
     "answer": 1,
-    "explanation": "tox-ansible auto-discovers test scenarios and creates environments for different Python/ansible-core combos."
+    "explanation": "Online words last — be thoughtful."
   },
   {
     "id": 71,
-    "category": "tox-ansible",
-    "prompt": "What configuration principle does tox-ansible follow for test discovery?",
-    "options": ["Explicit manifest-based registration", "Convention over configuration", "AI-powered automatic detection", "Manual YAML-based test mapping"],
+    "level": "hard",
+    "category": "Kindness",
+    "prompt": "Allyship means…",
+    "options": [
+      "Speaking over marginalized voices",
+      "Supporting fair treatment for others",
+      "Staying silent always"
+    ],
     "answer": 1,
-    "explanation": "tox-ansible uses convention over configuration to automatically find and run test scenarios."
+    "explanation": "Allies listen and help amplify fairness."
   },
   {
     "id": 72,
-    "category": "ansible-builder",
-    "prompt": "What file defines an Execution Environment for ansible-builder?",
-    "options": ["Dockerfile", "execution-environment.yml", "ansible.cfg", "builder.conf"],
+    "level": "hard",
+    "category": "Kindness",
+    "prompt": "Restorative conversation after conflict focuses on…",
+    "options": [
+      "Punishment only",
+      "Understanding harm and repairing trust",
+      "Winning the argument"
+    ],
     "answer": 1,
-    "explanation": "execution-environment.yml specifies the base image, dependencies, and collections for the EE."
+    "explanation": "Repair builds stronger communities."
   },
   {
     "id": 73,
-    "category": "ansible-builder",
-    "prompt": "Which ansible-builder command generates the Containerfile without actually building the image?",
-    "options": ["ansible-builder create", "ansible-builder generate", "ansible-builder init", "ansible-builder dry-run"],
-    "answer": 0,
-    "explanation": "ansible-builder create generates the build context and Containerfile without running the build."
+    "level": "easy",
+    "category": "Healthy Habits",
+    "prompt": "Brushing teeth twice a day helps…",
+    "options": [
+      "Cavities grow",
+      "Keep teeth clean and strong",
+      "Turn teeth blue"
+    ],
+    "answer": 1,
+    "explanation": "Brushing removes plaque and food bits."
   },
   {
     "id": 74,
-    "category": "ansible-sign",
-    "prompt": "What cryptographic system does ansible-sign use to sign projects?",
-    "options": ["AES-256 symmetric encryption", "RSA key pairs via OpenSSL", "GPG (GNU Privacy Guard)", "SHA-512 hash verification only"],
-    "answer": 2,
-    "explanation": "ansible-sign uses GPG to cryptographically sign and verify Ansible project content."
+    "level": "easy",
+    "category": "Healthy Habits",
+    "prompt": "Water is…",
+    "options": [
+      "Bad for you",
+      "Important to drink every day",
+      "Only for plants"
+    ],
+    "answer": 1,
+    "explanation": "Water keeps your body working well."
   },
   {
     "id": 75,
-    "category": "ansible-sign",
-    "prompt": "Which command verifies a signed Ansible project?",
-    "options": ["ansible-sign verify project .", "ansible-sign project gpg-verify .", "gpg --verify ansible-project .", "ansible-sign check --gpg ."],
+    "level": "easy",
+    "category": "Healthy Habits",
+    "prompt": "Sleep helps your brain…",
+    "options": [
+      "Forget everything",
+      "Rest and grow",
+      "Race faster only"
+    ],
     "answer": 1,
-    "explanation": "ansible-sign project gpg-verify verifies the GPG signature of project files."
+    "explanation": "Kids need plenty of sleep to learn and play."
   },
   {
     "id": 76,
-    "category": "ansible-navigator",
-    "prompt": "What type of interface does ansible-navigator provide?",
-    "options": ["A web-based dashboard", "A terminal user interface (TUI)", "A desktop GUI application", "A mobile companion app"],
+    "level": "easy",
+    "category": "Healthy Habits",
+    "prompt": "Fruits and vegetables give you…",
+    "options": [
+      "Only sugar crashes",
+      "Vitamins and energy",
+      "Super speed forever"
+    ],
     "answer": 1,
-    "explanation": "ansible-navigator provides an interactive terminal user interface for Ansible workflows."
+    "explanation": "Colorful foods help your body stay healthy."
   },
   {
     "id": 77,
-    "category": "ansible-navigator",
-    "prompt": "How do you run a playbook with a specific Execution Environment in ansible-navigator?",
-    "options": ["ansible-navigator run site.yml --ee my-ee", "ansible-navigator run site.yml --execution-environment-image my-ee", "ansible-navigator exec site.yml --container my-ee", "ansible-navigator play site.yml --image my-ee"],
+    "level": "easy",
+    "category": "Healthy Habits",
+    "prompt": "Washing hands with soap removes…",
+    "options": [
+      "Only colors",
+      "Germs that can make you sick",
+      "Your fingerprints"
+    ],
     "answer": 1,
-    "explanation": "The --execution-environment-image flag specifies which EE container to use for the run."
+    "explanation": "Wash hands before eating and after the bathroom."
   },
   {
     "id": 78,
-    "category": "ansible-navigator",
-    "prompt": "Which key navigates back or exits in the ansible-navigator TUI?",
-    "options": ["Q to quit", "Ctrl+C to terminate", "ESC to go back", "Backspace to return"],
-    "answer": 2,
-    "explanation": "The ESC key navigates back through ansible-navigator's TUI screens."
+    "level": "easy",
+    "category": "Healthy Habits",
+    "prompt": "Exercise like running or dancing…",
+    "options": [
+      "Is only for adults",
+      "Keeps your heart and muscles strong",
+      "Should never happen"
+    ],
+    "answer": 1,
+    "explanation": "Moving your body every day is healthy."
   },
-
   {
     "id": 79,
-    "category": "eda",
-    "prompt": "What does EDA stand for in the Ansible ecosystem?",
-    "options": ["Enterprise Data Analytics", "Event-Driven Ansible", "Extended Deployment Architecture", "Endpoint Detection Agent"],
+    "level": "easy",
+    "category": "Healthy Habits",
+    "prompt": "Too much screen time before bed can…",
+    "options": [
+      "Help you sleep instantly",
+      "Make it harder to fall asleep",
+      "Brush your teeth"
+    ],
     "answer": 1,
-    "explanation": "EDA stands for Event-Driven Ansible, which responds to events with automated actions."
+    "explanation": "Screens before bed can disrupt sleep."
   },
   {
     "id": 80,
-    "category": "eda",
-    "prompt": "What file format defines rules in Event-Driven Ansible?",
-    "options": ["Playbook YAML", "Rulebook YAML", "Inventory INI", "Policy JSON"],
+    "level": "easy",
+    "category": "Healthy Habits",
+    "prompt": "Covering a cough with your elbow…",
+    "options": [
+      "Spreads germs",
+      "Helps stop germs spreading",
+      "Is rude"
+    ],
     "answer": 1,
-    "explanation": "Rulebooks are YAML files that define event sources, conditions, and actions for EDA."
+    "explanation": "Cover coughs and sneezes to protect others."
   },
   {
     "id": 81,
-    "category": "eda",
-    "prompt": "What are the three main components of an EDA rulebook rule?",
-    "options": ["Source, condition, action", "Input, transform, output", "Trigger, filter, handler", "Event, rule, playbook"],
-    "answer": 0,
-    "explanation": "Each EDA rule has a source (where events come from), condition (when to act), and action (what to do)."
+    "level": "medium",
+    "category": "Healthy Habits",
+    "prompt": "A balanced plate often has…",
+    "options": [
+      "Only sweets",
+      "Protein, grains, fruits, and veggies",
+      "Just soda"
+    ],
+    "answer": 1,
+    "explanation": "Variety gives your body what it needs."
   },
   {
     "id": 82,
-    "category": "eda",
-    "prompt": "What command runs an EDA rulebook locally?",
-    "options": ["ansible-playbook rulebook.yml", "ansible-rulebook --rulebook rules.yml", "eda run rules.yml", "ansible-events --rules rules.yml"],
+    "level": "medium",
+    "category": "Healthy Habits",
+    "prompt": "Stretching before sports can…",
+    "options": [
+      "Always cause injury",
+      "Help prevent muscle strains",
+      "Replace water"
+    ],
     "answer": 1,
-    "explanation": "ansible-rulebook is the CLI tool for running Event-Driven Ansible rulebooks."
+    "explanation": "Warm-ups prepare your body to move."
+  },
+  {
+    "id": 83,
+    "level": "medium",
+    "category": "Healthy Habits",
+    "prompt": "If you feel sick, resting and fluids…",
+    "options": [
+      "Are useless",
+      "Help recovery",
+      "Mean you must play outside"
+    ],
+    "answer": 1,
+    "explanation": "Rest helps your immune system fight illness."
+  },
+  {
+    "id": 84,
+    "level": "medium",
+    "category": "Healthy Habits",
+    "prompt": "Sunscreen on sunny days protects…",
+    "options": [
+      "Only your shoes",
+      "Your skin from sunburn",
+      "Your homework"
+    ],
+    "answer": 1,
+    "explanation": "Sun protection prevents painful burns."
+  },
+  {
+    "id": 85,
+    "level": "medium",
+    "category": "Healthy Habits",
+    "prompt": "Reading food labels can show…",
+    "options": [
+      "Secret codes only",
+      "Sugar, salt, and serving size",
+      "Your future"
+    ],
+    "answer": 1,
+    "explanation": "Labels help you make informed choices."
+  },
+  {
+    "id": 86,
+    "level": "medium",
+    "category": "Healthy Habits",
+    "prompt": "Mindful breathing when stressed can…",
+    "options": [
+      "Make things worse always",
+      "Calm your body a little",
+      "Stop time"
+    ],
+    "answer": 1,
+    "explanation": "Slow breaths can ease big feelings."
+  },
+  {
+    "id": 87,
+    "level": "medium",
+    "category": "Healthy Habits",
+    "prompt": "Breakfast before school…",
+    "options": [
+      "Is optional always",
+      "Fuels your morning brain",
+      "Replaces sleep"
+    ],
+    "answer": 1,
+    "explanation": "Morning food helps focus in class."
   },
   {
     "id": 88,
-    "category": "inventory",
-    "prompt": "What type of inventory script or plugin generates host lists from external sources like cloud providers?",
-    "options": ["Static inventory", "Dynamic inventory", "Smart inventory", "Runtime inventory"],
+    "level": "medium",
+    "category": "Healthy Habits",
+    "prompt": "Sitting with good posture…",
+    "options": [
+      "Hurts your back always",
+      "Supports your spine while learning",
+      "Is impossible"
+    ],
     "answer": 1,
-    "explanation": "Dynamic inventory plugins pull live host data from cloud APIs, CMDBs, and other external sources."
+    "explanation": "Sit tall and take breaks from slouching."
   },
   {
     "id": 89,
-    "category": "inventory",
-    "prompt": "What is the default inventory file location if none is specified?",
-    "options": ["/etc/ansible/hosts", "/var/ansible/inventory", "~/.ansible/hosts", "/opt/ansible/inventory"],
-    "answer": 0,
-    "explanation": "/etc/ansible/hosts is the default inventory location, configurable in ansible.cfg."
+    "level": "hard",
+    "category": "Healthy Habits",
+    "prompt": "Hydration during sports prevents…",
+    "options": [
+      "Superpowers",
+      "Dehydration and cramps",
+      "Homework"
+    ],
+    "answer": 1,
+    "explanation": "Drink water before, during, and after activity."
   },
   {
     "id": 90,
-    "category": "modules",
-    "prompt": "Which module copies files from the control node to managed nodes?",
-    "options": ["ansible.builtin.fetch", "ansible.builtin.copy", "ansible.builtin.synchronize", "ansible.builtin.transfer"],
+    "level": "hard",
+    "category": "Healthy Habits",
+    "prompt": "Mental health is…",
+    "options": [
+      "Only about muscles",
+      "How you think and feel — important like physical health",
+      "Not real"
+    ],
     "answer": 1,
-    "explanation": "ansible.builtin.copy transfers files from the control node to remote hosts."
+    "explanation": "Feelings matter — talk to trusted adults."
   },
   {
     "id": 91,
-    "category": "modules",
-    "prompt": "Which module is the opposite of copy — pulling files FROM managed nodes to the control node?",
-    "options": ["ansible.builtin.get", "ansible.builtin.fetch", "ansible.builtin.pull", "ansible.builtin.download"],
+    "level": "hard",
+    "category": "Healthy Habits",
+    "prompt": "Sleep for kids around your age is often…",
+    "options": [
+      "3 hours",
+      "9–12 hours",
+      "20 hours"
+    ],
     "answer": 1,
-    "explanation": "ansible.builtin.fetch retrieves files from remote hosts and stores them locally."
+    "explanation": "Growing bodies need lots of sleep."
   },
   {
     "id": 92,
-    "category": "modules",
-    "prompt": "Which module manages Linux user accounts?",
-    "options": ["ansible.builtin.account", "ansible.builtin.user", "ansible.builtin.useradd", "ansible.builtin.identity"],
+    "level": "hard",
+    "category": "Healthy Habits",
+    "prompt": "Added sugar in drinks can…",
+    "options": [
+      "Replace vegetables",
+      "Spike energy then crash",
+      "Grow teeth"
+    ],
     "answer": 1,
-    "explanation": "ansible.builtin.user manages user accounts, groups, and home directories on Linux systems."
+    "explanation": "Too much sugar isn't great for steady energy."
   },
   {
     "id": 93,
-    "category": "modules",
-    "prompt": "What module sends arbitrary commands to managed nodes?",
-    "options": ["ansible.builtin.command", "ansible.builtin.exec", "ansible.builtin.run", "ansible.builtin.invoke"],
-    "answer": 0,
-    "explanation": "ansible.builtin.command executes commands on remote nodes without going through a shell."
+    "level": "hard",
+    "category": "Healthy Habits",
+    "prompt": "If anxiety feels big, helpful steps include…",
+    "options": [
+      "Keeping it secret forever",
+      "Talking to a trusted adult or counselor",
+      "Skipping school always"
+    ],
+    "answer": 1,
+    "explanation": "Adults can help you learn coping tools."
   },
   {
     "id": 94,
-    "category": "modules",
-    "prompt": "What is the key difference between the ansible.builtin.command and ansible.builtin.shell modules?",
-    "options": ["ansible.builtin.command runs faster", "ansible.builtin.shell processes through /bin/sh, supporting pipes and redirects", "ansible.builtin.command supports Windows", "ansible.builtin.shell runs asynchronously"],
+    "level": "hard",
+    "category": "Healthy Habits",
+    "prompt": "Food allergies mean you must…",
+    "options": [
+      "Share snacks blindly",
+      "Avoid triggers and read labels carefully",
+      "Eat faster"
+    ],
     "answer": 1,
-    "explanation": "The ansible.builtin.shell module runs commands through /bin/sh, enabling pipes, redirects, and shell built-ins."
+    "explanation": "Allergies are serious — plan with adults."
   },
   {
     "id": 95,
-    "category": "modules",
-    "prompt": "Which module manages firewall rules on RHEL systems?",
-    "options": ["ansible.builtin.iptables", "ansible.posix.firewalld", "ansible.builtin.firewall", "ansible.builtin.ufw"],
+    "level": "hard",
+    "category": "Healthy Habits",
+    "prompt": "Regular check-ups with a doctor…",
+    "options": [
+      "Are only when broken",
+      "Help catch problems early",
+      "Replace sleep"
+    ],
     "answer": 1,
-    "explanation": "ansible.posix.firewalld manages firewalld rules, zones, and services on RHEL-based systems."
+    "explanation": "Preventive care keeps you healthier."
   },
   {
     "id": 96,
-    "category": "modules",
-    "prompt": "Which module sets or modifies file permissions and ownership?",
-    "options": ["ansible.builtin.chmod", "ansible.builtin.file", "ansible.builtin.permission", "ansible.builtin.stat"],
+    "level": "hard",
+    "category": "Healthy Habits",
+    "prompt": "Blue light glasses or night mode may…",
+    "options": [
+      "Cook dinner",
+      "Reduce eye strain from screens",
+      "Do homework for you"
+    ],
     "answer": 1,
-    "explanation": "ansible.builtin.file manages file properties including permissions, ownership, and symlinks."
+    "explanation": "Breaks from screens help eyes and sleep."
   },
   {
     "id": 97,
-    "category": "modules",
-    "prompt": "Which module manages cron jobs on remote systems?",
-    "options": ["ansible.builtin.schedule", "ansible.builtin.cron", "ansible.builtin.timer", "ansible.builtin.at"],
+    "level": "easy",
+    "category": "Responsibility",
+    "prompt": "Homework is your responsibility to…",
+    "options": [
+      "Ignore",
+      "Try your best and ask for help if stuck",
+      "Make parents do it"
+    ],
     "answer": 1,
-    "explanation": "ansible.builtin.cron manages crontab entries for scheduled task execution."
+    "explanation": "Learning takes practice and effort."
   },
   {
     "id": 98,
-    "category": "modules",
-    "prompt": "Which module creates, removes, and manages logical volumes?",
-    "options": ["ansible.builtin.disk", "community.general.lvol", "ansible.builtin.partition", "ansible.builtin.volume"],
+    "level": "easy",
+    "category": "Responsibility",
+    "prompt": "If you make a mess, you should…",
+    "options": [
+      "Leave it",
+      "Clean it up",
+      "Blame the dog always"
+    ],
     "answer": 1,
-    "explanation": "community.general.lvol manages LVM logical volumes on Linux systems."
+    "explanation": "Cleaning up shows respect for shared spaces."
   },
   {
     "id": 99,
-    "category": "modules",
-    "prompt": "What module is used to download files from HTTP, HTTPS, or FTP to managed nodes?",
-    "options": ["ansible.builtin.fetch", "ansible.builtin.get_url", "ansible.builtin.download", "ansible.builtin.wget"],
+    "level": "easy",
+    "category": "Responsibility",
+    "prompt": "Being on time for class or practice…",
+    "options": [
+      "Does not matter",
+      "Shows respect for others' time",
+      "Is impossible"
+    ],
     "answer": 1,
-    "explanation": "ansible.builtin.get_url downloads files from the web to managed nodes."
+    "explanation": "Punctuality is a life skill."
   },
   {
     "id": 100,
-    "category": "modules",
-    "prompt": "What module interacts with web services by sending HTTP requests?",
-    "options": ["ansible.builtin.http", "ansible.builtin.uri", "ansible.builtin.curl", "ansible.builtin.request"],
+    "level": "easy",
+    "category": "Responsibility",
+    "prompt": "Feeding a pet on schedule is…",
+    "options": [
+      "Optional fun",
+      "Part of caring for another living thing",
+      "Only for vets"
+    ],
     "answer": 1,
-    "explanation": "ansible.builtin.uri sends HTTP/HTTPS requests and can validate responses."
+    "explanation": "Pets depend on you every day."
   },
   {
     "id": 101,
-    "category": "roles",
-    "prompt": "What is the standard directory for role default variables?",
-    "options": ["roles/myrole/vars/", "roles/myrole/defaults/", "roles/myrole/group_vars/", "roles/myrole/config/"],
+    "level": "easy",
+    "category": "Responsibility",
+    "prompt": "Putting toys away after playing…",
+    "options": [
+      "Is pointless",
+      "Keeps rooms safe and tidy",
+      "Is only for guests"
+    ],
     "answer": 1,
-    "explanation": "defaults/main.yml contains the lowest-precedence default variables for a role."
+    "explanation": "Tidying prevents trips and lost items."
   },
   {
     "id": 102,
-    "category": "roles",
-    "prompt": "What is the difference between defaults/ and vars/ in a role?",
-    "options": ["defaults is for Python vars, vars is for YAML vars", "defaults has low precedence and is easily overridden; vars has high precedence", "They are identical and interchangeable", "defaults is deprecated in favor of vars"],
+    "level": "easy",
+    "category": "Responsibility",
+    "prompt": "Telling the truth when you broke a cup…",
+    "options": [
+      "Gets you in more trouble always",
+      "Builds trust with adults",
+      "Is never needed"
+    ],
     "answer": 1,
-    "explanation": "Role defaults are easily overridden; role vars have higher precedence and are harder to override."
+    "explanation": "Honesty helps adults trust you."
   },
   {
     "id": 103,
-    "category": "roles",
-    "prompt": "What file inside a role's meta/ directory defines dependencies on other roles?",
-    "options": ["requirements.yml", "meta/main.yml", "dependencies.yml", "galaxy.yml"],
+    "level": "easy",
+    "category": "Responsibility",
+    "prompt": "Following classroom rules helps…",
+    "options": [
+      "Only the teacher",
+      "Everyone learn safely",
+      "Nobody"
+    ],
     "answer": 1,
-    "explanation": "meta/main.yml defines role metadata including dependencies, platforms, and Galaxy info."
+    "explanation": "Rules protect learning time for all."
   },
   {
     "id": 104,
-    "category": "security",
-    "prompt": "Which ansible-vault subcommand encrypts an existing plaintext file?",
-    "options": ["ansible-vault lock", "ansible-vault encrypt", "ansible-vault seal", "ansible-vault protect"],
+    "level": "easy",
+    "category": "Responsibility",
+    "prompt": "Chores like setting the table…",
+    "options": [
+      "Are punishments only",
+      "Help the whole family",
+      "Should be avoided"
+    ],
     "answer": 1,
-    "explanation": "ansible-vault encrypt converts a plaintext file to an encrypted vault file."
+    "explanation": "Everyone contributes at home."
   },
   {
     "id": 105,
-    "category": "security",
-    "prompt": "How do you edit an encrypted vault file in place?",
-    "options": ["ansible-vault decrypt, edit, re-encrypt", "ansible-vault edit filename.yml", "ansible-vault open filename.yml", "ansible-vault modify filename.yml"],
+    "level": "medium",
+    "category": "Responsibility",
+    "prompt": "Procrastinating means…",
+    "options": [
+      "Doing tasks early",
+      "Putting tasks off until later",
+      "Finishing instantly"
+    ],
     "answer": 1,
-    "explanation": "ansible-vault edit decrypts the file into a temporary buffer, opens an editor, and re-encrypts on save."
+    "explanation": "Breaking tasks into steps beats delay."
   },
   {
     "id": 106,
-    "category": "security",
-    "prompt": "What flag passes the vault password when running a playbook?",
-    "options": ["--vault-key", "--ask-vault-pass", "--vault-secret", "--decrypt-pass"],
+    "level": "medium",
+    "category": "Responsibility",
+    "prompt": "If you borrow a library book, you must…",
+    "options": [
+      "Keep it forever",
+      "Return it by the due date",
+      "Draw in every page"
+    ],
     "answer": 1,
-    "explanation": "--ask-vault-pass prompts for the vault password interactively at runtime."
+    "explanation": "Libraries share books with everyone."
   },
   {
     "id": 107,
-    "category": "templating",
-    "prompt": "What Jinja2 delimiter is used for expressions (variables) in Ansible templates?",
-    "options": ["{% %}", "{{ }}", "{# #}", "<% %>"],
+    "level": "medium",
+    "category": "Responsibility",
+    "prompt": "A planner or calendar helps you…",
+    "options": [
+      "Forget deadlines",
+      "Remember tests and activities",
+      "Skip school"
+    ],
     "answer": 1,
-    "explanation": "Double curly braces {{ }} are used to output variable values in Jinja2 templates."
+    "explanation": "Writing plans builds organization skills."
   },
   {
     "id": 108,
-    "category": "templating",
-    "prompt": "What Jinja2 delimiter is used for control statements like loops and conditionals?",
-    "options": ["{{ }}", "{% %}", "{# #}", "[% %]"],
+    "level": "medium",
+    "category": "Responsibility",
+    "prompt": "Owning a mistake at group work means…",
+    "options": [
+      "Blaming teammates",
+      "Saying what you will fix",
+      "Quitting"
+    ],
     "answer": 1,
-    "explanation": "{% %} delimiters wrap control flow statements like for loops and if blocks in Jinja2."
+    "explanation": "Teams work when people take responsibility."
   },
   {
     "id": 109,
-    "category": "templating",
-    "prompt": "What Jinja2 filter converts a variable to an integer?",
-    "options": ["| to_int", "| int", "| integer", "| cast_int"],
+    "level": "medium",
+    "category": "Responsibility",
+    "prompt": "Limiting screen time is…",
+    "options": [
+      "An adult-only issue",
+      "Your job too — balance play, sleep, and school",
+      "Impossible"
+    ],
     "answer": 1,
-    "explanation": "The int filter converts a value to an integer in Jinja2 expressions."
+    "explanation": "You can help manage healthy screen habits."
   },
   {
     "id": 110,
-    "category": "templating",
-    "prompt": "What Jinja2 filter provides a fallback value if a variable is undefined?",
-    "options": ["| fallback", "| default", "| or_else", "| coalesce"],
+    "level": "medium",
+    "category": "Responsibility",
+    "prompt": "If you find lost money at school, you should…",
+    "options": [
+      "Keep it silently",
+      "Turn it in to lost-and-found or an adult",
+      "Spend it at lunch"
+    ],
     "answer": 1,
-    "explanation": "The default filter returns a specified value when the variable is undefined."
+    "explanation": "Honesty helps items return to owners."
   },
   {
     "id": 111,
-    "category": "inventory",
-    "prompt": "What special group automatically contains every host in the inventory?",
-    "options": ["everything", "all", "global", "hosts"],
+    "level": "medium",
+    "category": "Responsibility",
+    "prompt": "Packing your bag the night before…",
+    "options": [
+      "Wastes time",
+      "Reduces morning stress",
+      "Is only for trips"
+    ],
     "answer": 1,
-    "explanation": "The 'all' group is a built-in group that includes every host defined in the inventory."
+    "explanation": "Prep saves rushed mornings."
   },
   {
     "id": 112,
-    "category": "inventory",
-    "prompt": "What special group contains hosts that are not members of any other group?",
-    "options": ["default", "ungrouped", "orphans", "none"],
+    "level": "medium",
+    "category": "Responsibility",
+    "prompt": "When you agree to a playdate time, you should…",
+    "options": [
+      "Show up late without telling",
+      "Arrive on time or communicate changes",
+      "Cancel last minute for fun"
+    ],
     "answer": 1,
-    "explanation": "The 'ungrouped' group automatically contains hosts not assigned to any explicit group."
+    "explanation": "Reliability strengthens friendships."
   },
   {
     "id": 113,
-    "category": "advanced",
-    "prompt": "What Ansible feature allows a task to run on the control node instead of the managed host?",
-    "options": ["local_action", "delegate_to: localhost", "connection: local", "All of the above"],
-    "answer": 3,
-    "explanation": "local_action, delegate_to: localhost, and connection: local all execute tasks on the control node."
+    "level": "hard",
+    "category": "Responsibility",
+    "prompt": "Integrity means doing the right thing…",
+    "options": [
+      "Only when watched",
+      "Even when no one is looking",
+      "Never"
+    ],
+    "answer": 1,
+    "explanation": "Character shows in private choices too."
   },
   {
     "id": 114,
-    "category": "advanced",
-    "prompt": "What does the 'delegate_to' directive do?",
-    "options": ["Assigns the task to another user", "Runs the task on a different host than the current play target", "Queues the task for later execution", "Sends the task to Automation controller"],
+    "level": "hard",
+    "category": "Responsibility",
+    "prompt": "Group project roles work best when…",
+    "options": [
+      "One person does everything",
+      "Tasks are shared clearly",
+      "Nobody communicates"
+    ],
     "answer": 1,
-    "explanation": "delegate_to runs a task on a specified host while still using variables from the original host."
+    "explanation": "Clear roles prevent unfair workloads."
   },
   {
     "id": 115,
-    "category": "advanced",
-    "prompt": "What does 'serial' control in an Ansible play?",
-    "options": ["Execution order of tasks", "How many hosts to process in each batch", "The number of retries", "The timeout per task"],
+    "level": "hard",
+    "category": "Responsibility",
+    "prompt": "Environmental responsibility can include…",
+    "options": [
+      "Littering faster",
+      "Recycling and reducing waste",
+      "Leaving taps running"
+    ],
     "answer": 1,
-    "explanation": "The serial keyword limits how many hosts are processed at once, enabling rolling updates."
+    "explanation": "Small eco habits protect the planet."
   },
   {
     "id": 116,
-    "category": "advanced",
-    "prompt": "What Ansible strategy plugin allows you to step through tasks one at a time?",
-    "options": ["debug", "step", "interactive", "manual"],
-    "answer": 0,
-    "explanation": "The debug strategy lets you step through tasks interactively for troubleshooting."
+    "level": "hard",
+    "category": "Responsibility",
+    "prompt": "If you break something that is not yours…",
+    "options": [
+      "Hide it",
+      "Tell the owner and offer to fix or replace",
+      "Blame weather"
+    ],
+    "answer": 1,
+    "explanation": "Taking responsibility repairs trust."
   },
   {
     "id": 117,
-    "category": "advanced",
-    "prompt": "What does 'run_once: true' do on a task?",
-    "options": ["Caches the result permanently", "Ensures the task runs on only one host in the batch", "Prevents the task from being retried", "Locks the task to a single thread"],
+    "level": "hard",
+    "category": "Responsibility",
+    "prompt": "Time blocking for homework means…",
+    "options": [
+      "Doing it during class secretly",
+      "Setting focused chunks with breaks",
+      "Never starting"
+    ],
     "answer": 1,
-    "explanation": "run_once ensures the task executes on only one host, useful for one-time setup actions."
+    "explanation": "Focused blocks beat marathon cramming."
   },
   {
     "id": 118,
-    "category": "collections",
-    "prompt": "What command installs an Ansible collection from Galaxy?",
-    "options": ["ansible-galaxy install collection", "ansible-galaxy collection install", "ansible-collection install", "pip install ansible-collection"],
+    "level": "hard",
+    "category": "Responsibility",
+    "prompt": "Digital responsibility includes…",
+    "options": [
+      "Sharing others' private photos",
+      "Respecting privacy and permissions",
+      "Spamming chats"
+    ],
     "answer": 1,
-    "explanation": "ansible-galaxy collection install downloads and installs collections from Galaxy or Automation Hub."
+    "explanation": "Ask before posting photos of friends."
   },
   {
     "id": 119,
-    "category": "collections",
-    "prompt": "What file lists collection dependencies for a project?",
-    "options": ["galaxy.yml", "requirements.yml", "collections.cfg", "dependencies.yml"],
+    "level": "hard",
+    "category": "Responsibility",
+    "prompt": "Leadership without a title can look like…",
+    "options": [
+      "Bossing people",
+      "Setting a good example",
+      "Cheating to win"
+    ],
     "answer": 1,
-    "explanation": "requirements.yml lists collections (and roles) to install with ansible-galaxy install -r."
+    "explanation": "Anyone can lead by example."
   },
   {
     "id": 120,
-    "category": "plugins",
-    "prompt": "What type of Ansible plugin transforms data within a task — like converting JSON or encoding strings?",
-    "options": ["Action plugin", "Filter plugin", "Lookup plugin", "Callback plugin"],
+    "level": "hard",
+    "category": "Responsibility",
+    "prompt": "Long-term goals like learning an instrument need…",
+    "options": [
+      "One day of practice",
+      "Regular practice over months",
+      "No effort"
+    ],
     "answer": 1,
-    "explanation": "Filter plugins transform data within Jinja2 expressions used in playbooks."
-  },
-  {
-    "id": 121,
-    "category": "plugins",
-    "prompt": "What type of Ansible plugin retrieves data from external sources like files, databases, or APIs?",
-    "options": ["Filter plugin", "Lookup plugin", "Inventory plugin", "Vars plugin"],
-    "answer": 1,
-    "explanation": "Lookup plugins access external data sources and return values for use in playbooks."
-  },
-  {
-    "id": 122,
-    "category": "plugins",
-    "prompt": "What type of plugin controls how Ansible output is displayed during playbook runs?",
-    "options": ["Display plugin", "Callback plugin", "Stdout plugin", "Logger plugin"],
-    "answer": 1,
-    "explanation": "Callback plugins customize the output and event handling during playbook execution."
-  },
-  {
-    "id": 123,
-    "category": "plugins",
-    "prompt": "What Ansible plugin type determines how to connect to managed hosts?",
-    "options": ["Transport plugin", "Connection plugin", "Network plugin", "Channel plugin"],
-    "answer": 1,
-    "explanation": "Connection plugins (ssh, local, winrm, etc.) control how Ansible communicates with hosts."
-  },
-  {
-    "id": 124,
-    "category": "network",
-    "prompt": "What connection plugin is typically used to manage network devices that don't support SSH+Python?",
-    "options": ["ansible.netcommon.ssh", "ansible.netcommon.network_cli", "ansible.builtin.paramiko", "ansible.builtin.telnet"],
-    "answer": 1,
-    "explanation": "network_cli connects to network devices over SSH using the device's CLI interface."
-  },
-  {
-    "id": 125,
-    "category": "network",
-    "prompt": "What Ansible module backs up the running configuration of a network device?",
-    "options": ["network_backup", "ansible.netcommon.cli_config with backup: yes", "config_manager", "network_save"],
-    "answer": 1,
-    "explanation": "ansible.netcommon.cli_config with backup: yes saves the current running configuration before making changes."
-  },
-  {
-    "id": 126,
-    "category": "cloud",
-    "prompt": "What collection provides Ansible modules for managing Amazon Web Services?",
-    "options": ["amazon.cloud", "amazon.aws", "aws.ansible", "community.cloud.aws"],
-    "answer": 1,
-    "explanation": "amazon.aws is the FQCN for the official AWS collection with EC2, S3, IAM, and more."
-  },
-  {
-    "id": 127,
-    "category": "cloud",
-    "prompt": "What collection provides Ansible modules for managing Microsoft Azure resources?",
-    "options": ["microsoft.cloud", "azure.azcollection", "azure.rm", "microsoft.azure"],
-    "answer": 1,
-    "explanation": "azure.azcollection is the collection for managing Azure resources with Ansible."
-  },
-  {
-    "id": 128,
-    "category": "cloud",
-    "prompt": "What collection provides Ansible modules for managing Google Cloud Platform?",
-    "options": ["gcp.ansible", "google.cloud", "gcloud.modules", "google.gcp"],
-    "answer": 1,
-    "explanation": "google.cloud is the FQCN for the Google Cloud Platform Ansible collection."
-  },
-  {
-    "id": 129,
-    "category": "configuration",
-    "prompt": "What is the primary configuration file for Ansible?",
-    "options": ["ansible.ini", "ansible.cfg", "ansible.conf", "ansible.yaml"],
-    "answer": 1,
-    "explanation": "ansible.cfg is the main configuration file, searched in current directory, home, then /etc/ansible/."
-  },
-  {
-    "id": 130,
-    "category": "configuration",
-    "prompt": "What environment variable overrides the default Ansible configuration file location?",
-    "options": ["ANSIBLE_HOME", "ANSIBLE_CONFIG", "ANSIBLE_CFG_PATH", "ANSIBLE_SETTINGS"],
-    "answer": 1,
-    "explanation": "ANSIBLE_CONFIG points Ansible to a specific configuration file, overriding all other locations."
-  },
-  {
-    "id": 131,
-    "category": "basics",
-    "prompt": "What is a play in Ansible?",
-    "options": ["A single task execution", "A mapping of hosts to roles and tasks", "A collection of modules", "A type of inventory"],
-    "answer": 1,
-    "explanation": "A play maps a group of hosts to tasks, roles, and variables that should be applied to them."
-  },
-  {
-    "id": 132,
-    "category": "basics",
-    "prompt": "What is a task in Ansible?",
-    "options": ["A group of hosts", "A call to an Ansible module with specific arguments", "A variable definition", "A handler notification"],
-    "answer": 1,
-    "explanation": "A task is a single action — a call to a module with parameters — within a play."
-  },
-  {
-    "id": 133,
-    "category": "handlers",
-    "prompt": "When do handlers actually execute during a playbook run?",
-    "options": ["Immediately when notified", "At the end of each task", "At the end of the play, after all tasks", "Only on the second run"],
-    "answer": 2,
-    "explanation": "Handlers are queued by notify and run once at the end of the play (or when flush_handlers is called)."
-  },
-  {
-    "id": 134,
-    "category": "handlers",
-    "prompt": "What meta task forces all pending handlers to run immediately?",
-    "options": ["meta: run_handlers", "meta: flush_handlers", "meta: trigger_handlers", "meta: exec_handlers"],
-    "answer": 1,
-    "explanation": "meta: flush_handlers forces all notified handlers to execute at that point in the play."
-  },
-  {
-    "id": 135,
-    "category": "facts",
-    "prompt": "What module lets you define custom facts on managed nodes?",
-    "options": ["ansible.builtin.custom_fact", "ansible.builtin.set_fact", "ansible.builtin.define_var", "ansible.builtin.register_fact"],
-    "answer": 1,
-    "explanation": "ansible.builtin.set_fact creates or updates host-scoped variables (custom facts) during a play."
-  },
-  {
-    "id": 136,
-    "category": "facts",
-    "prompt": "How can you disable automatic fact gathering for a play?",
-    "options": ["no_facts: true", "gather_facts: false", "skip_facts: yes", "facts: disabled"],
-    "answer": 1,
-    "explanation": "Setting gather_facts: false at the play level skips the automatic setup module call."
-  },
-  {
-    "id": 137,
-    "category": "advanced",
-    "prompt": "What does 'async' do when set on a task?",
-    "options": ["Makes the task run in a container", "Runs the task asynchronously with a time limit", "Enables parallel module execution", "Queues the task for the next play"],
-    "answer": 1,
-    "explanation": "async sets a maximum runtime and allows the task to run in the background on the remote host."
-  },
-  {
-    "id": 138,
-    "category": "advanced",
-    "prompt": "What keyword works with async to control how often Ansible checks if the task is done?",
-    "options": ["interval", "poll", "check_every", "wait"],
-    "answer": 1,
-    "explanation": "The poll keyword sets how frequently (in seconds) Ansible checks the async task's status."
-  },
-  {
-    "id": 139,
-    "category": "advanced",
-    "prompt": "What does 'poll: 0' mean on an async task?",
-    "options": ["Check immediately", "Fire and forget — don't wait for it", "Poll as fast as possible", "Disable async mode"],
-    "answer": 1,
-    "explanation": "Setting poll: 0 means Ansible starts the task and moves on without waiting for the result."
-  },
-  {
-    "id": 140,
-    "category": "tags",
-    "prompt": "What feature allows you to selectively run or skip specific tasks in a playbook?",
-    "options": ["Labels", "Tags", "Markers", "Selectors"],
-    "answer": 1,
-    "explanation": "Tags let you run or skip specific tasks using --tags or --skip-tags on the command line."
-  },
-  {
-    "id": 141,
-    "category": "tags",
-    "prompt": "What flag runs only tasks tagged with 'deploy'?",
-    "options": ["--only deploy", "--tags deploy", "--filter deploy", "--select deploy"],
-    "answer": 1,
-    "explanation": "--tags deploy tells ansible-playbook to only run tasks that have the 'deploy' tag."
-  },
-  {
-    "id": 146,
-    "category": "ai",
-    "prompt": "What do you type in VS Code to trigger an Automation code assistant suggestion?",
-    "options": ["A YAML comment describing the task in natural language", "codegen: generate", "A special #AI directive", "Press Ctrl+Shift+L"],
-    "answer": 0,
-    "explanation": "Writing a natural language task description as a YAML comment triggers the Automation code assistant's suggestion."
-  },
-  {
-    "id": 147,
-    "category": "basics",
-    "prompt": "What protocol does Ansible primarily use to communicate with Linux managed nodes?",
-    "options": ["HTTP", "SSH", "SNMP", "RPC"],
-    "answer": 1,
-    "explanation": "Ansible uses SSH as its default transport for communicating with Linux managed nodes."
-  },
-  {
-    "id": 148,
-    "category": "basics",
-    "prompt": "What protocol does Ansible use to communicate with Windows managed nodes?",
-    "options": ["SSH", "WinRM", "RDP", "SMB"],
-    "answer": 1,
-    "explanation": "Ansible uses WinRM (Windows Remote Management) to manage Windows hosts."
-  },
-  {
-    "id": 149,
-    "category": "basics",
-    "prompt": "What is the minimum requirement on a managed Linux node for Ansible to work?",
-    "options": ["Ansible agent installed", "Python interpreter", "Java runtime", "Docker daemon"],
-    "answer": 1,
-    "explanation": "Ansible requires only a Python interpreter (and SSH access) on managed Linux nodes."
-  },
-  {
-    "id": 150,
-    "category": "advanced",
-    "prompt": "What lookup plugin reads the contents of a file on the control node?",
-    "options": ["lookup('read', 'file.txt')", "lookup('file', '/path/to/file')", "lookup('cat', 'file.txt')", "lookup('load', '/path/to/file')"],
-    "answer": 1,
-    "explanation": "The file lookup reads and returns the contents of a file from the Ansible control node."
-  },
-  {
-    "id": 151,
-    "category": "advanced",
-    "prompt": "What lookup plugin retrieves values from environment variables?",
-    "options": ["lookup('env_var', 'HOME')", "lookup('env', 'HOME')", "lookup('getenv', 'HOME')", "lookup('environ', 'HOME')"],
-    "answer": 1,
-    "explanation": "lookup('env', 'VAR_NAME') retrieves the value of an environment variable on the control node."
-  },
-  {
-    "id": 152,
-    "category": "advanced",
-    "prompt": "What does the 'become' directive do in Ansible?",
-    "options": ["Switches to a different playbook", "Escalates privileges (typically to root)", "Changes the connection plugin", "Enables verbose output"],
-    "answer": 1,
-    "explanation": "become: true escalates privileges, commonly using sudo to run tasks as root."
-  },
-  {
-    "id": 153,
-    "category": "advanced",
-    "prompt": "What is the default become method in Ansible?",
-    "options": ["su", "sudo", "runas", "doas"],
-    "answer": 1,
-    "explanation": "sudo is the default privilege escalation method used by Ansible's become system."
-  },
-  {
-    "id": 154,
-    "category": "testing",
-    "prompt": "What tool included with ansible-core runs unit and integration tests for collections?",
-    "options": ["ansible-check", "ansible-test", "ansible-verify", "ansible-qa"],
-    "answer": 1,
-    "explanation": "ansible-test provides sanity, unit, and integration test frameworks for Ansible collections."
-  },
-  {
-    "id": 155,
-    "category": "testing",
-    "prompt": "What type of ansible-test target checks for coding standards like PEP 8 and documentation?",
-    "options": ["lint tests", "sanity tests", "style tests", "compliance tests"],
-    "answer": 1,
-    "explanation": "Sanity tests check for coding standards, documentation, and common issues in collection code."
-  },
-  {
-    "id": 156,
-    "category": "error_handling",
-    "prompt": "What does 'any_errors_fatal: true' do at the play level?",
-    "options": ["Logs all errors to a file", "Stops execution on ALL hosts if ANY host fails", "Sends an alert email on error", "Retries failed tasks once"],
-    "answer": 1,
-    "explanation": "any_errors_fatal stops the entire play across all hosts if any single host encounters a failure."
-  },
-  {
-    "id": 157,
-    "category": "error_handling",
-    "prompt": "What section of a block runs regardless of whether the block succeeded or failed?",
-    "options": ["finally", "always", "cleanup", "ensure"],
-    "answer": 1,
-    "explanation": "The 'always' section of a block runs no matter what — useful for cleanup tasks."
-  },
-  {
-    "id": 158,
-    "category": "performance",
-    "prompt": "What Ansible feature caches facts between playbook runs to speed up execution?",
-    "options": ["Fact caching", "Persistent facts", "Fact pooling", "Fact storage"],
-    "answer": 0,
-    "explanation": "Fact caching (via redis, jsonfile, etc.) stores gathered facts to avoid re-gathering each run."
-  },
-  {
-    "id": 159,
-    "category": "performance",
-    "prompt": "What does 'pipelining = True' in ansible.cfg improve?",
-    "options": ["Network bandwidth", "SSH performance by reducing the number of connections", "Parallel task execution", "Disk I/O speed"],
-    "answer": 1,
-    "explanation": "Pipelining reduces SSH operations by sending and executing modules in a single SSH session."
-  },
-  {
-    "id": 160,
-    "category": "collections",
-    "prompt": "What command lists all installed Ansible collections?",
-    "options": ["ansible-galaxy collection list", "ansible collection show", "ansible-galaxy list --collections", "ansible info collections"],
-    "answer": 0,
-    "explanation": "ansible-galaxy collection list shows all collections installed on the system."
-  },
-  {
-    "id": 161,
-    "category": "modules",
-    "prompt": "What module manages SELinux settings on RHEL systems?",
-    "options": ["ansible.builtin.selinux", "ansible.posix.selinux", "ansible.builtin.security", "ansible.builtin.linux_security"],
-    "answer": 1,
-    "explanation": "ansible.posix.selinux manages SELinux mode (enforcing, permissive, disabled) and policy."
-  },
-  {
-    "id": 162,
-    "category": "modules",
-    "prompt": "What module manages systemd services and units?",
-    "options": ["ansible.builtin.service", "ansible.builtin.systemd_service", "ansible.builtin.systemctl", "ansible.builtin.daemon"],
-    "answer": 1,
-    "explanation": "ansible.builtin.systemd_service provides full systemd control including daemon-reload."
-  },
-  {
-    "id": 163,
-    "category": "modules",
-    "prompt": "What module adds or modifies lines in a file?",
-    "options": ["ansible.builtin.replace", "ansible.builtin.lineinfile", "ansible.builtin.edit", "ansible.builtin.sed"],
-    "answer": 1,
-    "explanation": "ansible.builtin.lineinfile ensures a particular line is present (or absent) in a file."
-  },
-  {
-    "id": 164,
-    "category": "modules",
-    "prompt": "What is the difference between ansible.builtin.lineinfile and ansible.builtin.blockinfile?",
-    "options": ["ansible.builtin.lineinfile manages single lines; ansible.builtin.blockinfile manages multi-line blocks", "They are aliases for the same module", "ansible.builtin.blockinfile is for binary files", "ansible.builtin.lineinfile is deprecated"],
-    "answer": 0,
-    "explanation": "ansible.builtin.lineinfile handles single lines while ansible.builtin.blockinfile inserts or updates multi-line text blocks."
-  },
-  {
-    "id": 165,
-    "category": "modules",
-    "prompt": "What module prints variable values or messages during playbook execution for debugging?",
-    "options": ["ansible.builtin.log", "ansible.builtin.debug", "ansible.builtin.print", "ansible.builtin.echo"],
-    "answer": 1,
-    "explanation": "ansible.builtin.debug prints messages or variable values during play execution."
-  },
-  {
-    "id": 166,
-    "category": "history",
-    "prompt": "What year did Red Hat acquire Ansible?",
-    "options": ["2013", "2015", "2017", "2019"],
-    "answer": 1,
-    "explanation": "Red Hat acquired Ansible Inc. in October 2015."
-  },
-  {
-    "id": 167,
-    "category": "community",
-    "prompt": "Where does the Ansible community primarily collaborate on development and discussions?",
-    "options": ["Slack only", "forum.ansible.com, GitHub, and Matrix", "Stack Overflow only", "Reddit only"],
-    "answer": 1,
-    "explanation": "The Ansible community uses forum.ansible.com for discussions, GitHub for code, and Matrix for real-time chat."
-  },
-  {
-    "id": 168,
-    "category": "platform",
-    "prompt": "What component of AAP provides a curated catalog of certified Ansible content?",
-    "options": ["Galaxy", "Private Automation Hub", "Ansible Registry", "Content Depot"],
-    "answer": 1,
-    "explanation": "Private Automation Hub hosts curated, certified, and custom Ansible content for organizations."
-  },
-  {
-    "id": 169,
-    "category": "basics",
-    "prompt": "What does the 'hosts' keyword in a play specify?",
-    "options": ["The DNS servers to use", "Which managed nodes the play runs against", "The control node address", "The proxy servers for SSH"],
-    "answer": 1,
-    "explanation": "The hosts keyword defines which inventory hosts or groups the play targets."
-  },
-  {
-    "id": 170,
-    "category": "basics",
-    "prompt": "What happens when state: absent is used with the file module?",
-    "options": ["The file is backed up", "The file or directory is deleted", "The file is hidden", "The file permissions are removed"],
-    "answer": 1,
-    "explanation": "state: absent ensures the specified file or directory does not exist (deletes it)."
-  },
-  {
-    "id": 171,
-    "category": "ai",
-    "prompt": "What is the chat-based AI assistant built into the Ansible Automation Platform web UI?",
-    "options": ["Automation code assistant", "Ansible intelligent assistant", "Red Hat Copilot", "Ansible Chatbot"],
-    "answer": 1,
-    "explanation": "The Ansible intelligent assistant is a chat interface inside the AAP web UI for interactive help."
-  },
-  {
-    "id": 172,
-    "category": "ai",
-    "prompt": "What is the difference between Automation code assistant and Ansible intelligent assistant?",
-    "options": ["They are the same product on different platforms", "Code assistant works in VS Code; intelligent assistant is a chat UI in AAP", "Code assistant is open source; intelligent assistant is proprietary", "Code assistant is for YAML; intelligent assistant is for Python"],
-    "answer": 1,
-    "explanation": "Automation code assistant generates playbook code in VS Code, while Ansible intelligent assistant provides a chat interface inside the AAP web UI."
-  },
-  {
-    "id": 173,
-    "category": "ai",
-    "prompt": "What replaced the product formerly known as Ansible Lightspeed?",
-    "options": ["Red Hat Copilot", "Automation code assistant", "Ansible intelligent assistant", "Ansible AI Engine"],
-    "answer": 1,
-    "explanation": "Automation code assistant replaced Ansible Lightspeed as the AI-powered VS Code experience for Ansible."
-  },
-  {
-    "id": 174,
-    "category": "community",
-    "prompt": "What is the official community forum for Ansible discussions, Q&A, and collaboration?",
-    "options": ["answers.ansible.com", "forum.ansible.com", "community.redhat.com", "discuss.ansible.org"],
-    "answer": 1,
-    "explanation": "forum.ansible.com is the official Ansible community forum for discussions, help, and collaboration."
-  },
-  {
-    "id": 175,
-    "category": "community",
-    "prompt": "Where should you go to ask questions and get help from the Ansible community?",
-    "options": ["File a GitHub issue", "Post on forum.ansible.com", "Email the Ansible mailing list", "Open a Red Hat support ticket"],
-    "answer": 1,
-    "explanation": "forum.ansible.com is the go-to place for community Q&A, getting help, and sharing knowledge."
-  },
-  {
-    "id": 176,
-    "category": "community",
-    "prompt": "What replaced the old Ansible mailing lists as the primary community discussion platform?",
-    "options": ["Ansible Discord", "Ansible Slack", "forum.ansible.com", "Reddit r/ansible"],
-    "answer": 2,
-    "explanation": "forum.ansible.com replaced the legacy mailing lists as the central hub for Ansible community discussions."
-  },
-  {
-    "id": 177,
-    "category": "community",
-    "prompt": "Where can you find community-driven working groups, project updates, and ecosystem news for Ansible?",
-    "options": ["ansible.com/blog only", "forum.ansible.com", "Twitter/X only", "The ansible-core changelog"],
-    "answer": 1,
-    "explanation": "forum.ansible.com hosts working group updates, project news, and ecosystem announcements."
-  },
-  {
-    "id": 178,
-    "category": "community",
-    "prompt": "What annual Red Hat event features hands-on Ansible labs, keynotes, and the latest automation announcements?",
-    "options": ["DevConf", "Red Hat Summit", "Open Source Summit", "FOSDEM"],
-    "answer": 1,
-    "explanation": "Red Hat Summit features keynotes, hands-on labs, and the latest Ansible Automation Platform announcements."
+    "explanation": "Consistency beats rare bursts of work."
   }
 ]

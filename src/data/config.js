@@ -1,5 +1,5 @@
 /**
- * Tuning constants — Operations Highway MVP
+ * Tuning constants — Life Skills Quiz Racing Game
  */
 export const CONFIG = {
   // Lanes: world X positions (center = 0)
@@ -37,7 +37,7 @@ export const CONFIG = {
   // Single hazard type (MVP clarity)
   OBSTACLE_KIND: "OUTAGE",
   /** Display name for HUD legend */
-  OBSTACLE_NAME: "Outage",
+  OBSTACLE_NAME: "Puddle",
   OBSTACLE_DAMAGE: 25,
 
   // Health (run survival meter)
@@ -102,117 +102,160 @@ export const CONFIG = {
   STATUS_HIT_MS: 3800,
   /** How long CORRECT / WRONG result screen shows before applying & resuming */
   QUIZ_RESULT_DISPLAY_MS: 1000,
+  /** Seconds kids have to answer a quiz question before it auto-skips */
+  QUIZ_ANSWER_SECONDS: 30,
+
+  /** Kid profile slots on the main menu (name / age / avatar). */
+  PROFILE: {
+    MAX_SLOTS: 3,
+    NAME_MAX: 16,
+    DEFAULT_AVATAR: "animals_fox",
+  },
+
+  /**
+   * Collectible unlock thresholds (per kid profile).
+   * Tune freely — kids never lose items they already earned.
+   */
+  REWARDS: {
+    RUNS_FOR_WHEEL: 1,
+    RACES_FOR_STAR: 1,
+    RACES_FOR_RIBBON: 3,
+    RACES_FOR_CUP: 5,
+    STREAK_FOR_BOLT: 3,
+    CORRECT_FOR_BOOK: 5,
+    CORRECT_FOR_MEDAL: 10,
+    CORRECT_FOR_CROWN: 20,
+    SCORE_FOR_PARTY: 2000,
+    SCORE_FOR_GEM: 5000,
+    SCORE_FOR_TROPHY: 10000,
+    DAYS_FOR_SUN: 2,
+    THEME_CORRECT: 5,
+  },
+};
+
+/** Kid-friendly labels for HUD, menus, and tutorials (internal pickup keys stay the same). */
+export const DISPLAY = {
+  OBSTACLE: "Puddle",
+  RIVAL: "Rival car",
+  STAR: "Star",
+  GEM: "Gem",
+  SHIELD: "Shield",
+  BOOST: "Quiz Boost",
+  FLOW: "Super Streak",
+  REMEDIATION: "Second Chance",
+  HEALTH_HINT: "Your energy bar — puddles drain it. At 0, game over.",
+  FLOW_HINT: "3 correct answers in a row triggers 8s of 1.2× score + pickup magnet",
 };
 
 export const DRIVERS = {
   anshul: {
     id: "anshul",
-    name: "Anshul Behl",
+    name: "Zoom Zoom",
     car: "f1",
     country: "CA",
     photo: "./assets/anshul_tron.png",
-    origin: "Toronto, Canada",
-    bio: "Former neural-net architect turned full-stack automation overlord. By day, Anshul codes sentient CI/CD pipelines for Red Hat. By night, he BASE-jumps off the CN Tower and trains for competitive high diving. Father of two future cyborg engineers, husband to the only person who can beat him at chess. Once automated an entire datacenter migration during a 14-hour flight from Toronto to Tokyo — and still had time to land a perfect reverse 3.5 somersault at the hotel pool. His enemies call him 'The Optimizer.' His daughters call him dad. The grid calls him inevitable.",
+    origin: "Maple Town",
+    bio: "Loves brain teasers, bike rides, and crossing the finish line with a grin.",
   },
   andrius: {
     id: "andrius",
-    name: "Andrius Benokraitis",
+    name: "Turbo Ted",
     car: "f1_maroon",
     country: "US",
     photo: "./assets/andrius_tron.png",
-    origin: "Durham, North Carolina",
-    bio: "Virginia Tech Hokie, Baltimore-born, Durham-adopted, and absolutely insufferable about AI — in the best way. Andrius will corner you at any gathering and explain why large language models are going to automate your breakfast. And you'll listen, because he's right. Leads a black-ops squad of open-source hackers dedicated to liberating enterprise software from proprietary prisons using Ansible, AI, and sheer audacity. His son Austin already has a GitHub profile with more stars than most senior engineers. His wife Kristin is the only person who can shut down an AI monologue with a single look. Has a Costco Executive membership so elite they named an aisle after him — once bought 400 pounds of chicken tenders in a single trip because 'bulk is a lifestyle, not a strategy.' His 18-wheeler runs on diesel, hubris, and a fine layer of smoke. They call him 'The Evangelist.'",
+    origin: "Hilltop Hills",
+    bio: "Big laugh, bigger heart. Keeps snacks in the glove box for friends.",
   },
   justin: {
     id: "justin",
-    name: "Justin Braun",
+    name: "Jazzy Jay",
     car: "f1_black_gold",
     country: "US",
     photo: "./assets/justin_tron.png",
-    origin: "Cary, North Carolina",
-    bio: "Justin Braun is the kind of guy who walks into a room and immediately needs everyone to know he's there. Not in a bad way — in a 'hold on, let me tell you about my evening' way. Prefers Club Haunted House even more than Club Aqua, and will not shut up about it. His friend built the deck there — great deck, beautiful deck, completely over-engineered. Used to be a real piece of work. Sloppy Steaks at Truffoni's — big rare steak, glass of water, slicked-back hair. You wouldn't have liked him. He's changed. Gave a keynote that was supposed to be fifteen minutes and went forty-five because he kept circling back to how the tables were the exact right shape. Has very strong opinions about whether or not bones are money. They are not. Will fight you on this. Was nominated for Baby of the Year three years running, even though he is a grown man. Won twice. They call him 'The Presentation.' The meeting could have been an email, but Justin made sure it wasn't.",
+    origin: "Sunset City",
+    bio: "Tells silly jokes at red lights and always shares the last cookie.",
   },
   remy: {
     id: "remy",
-    name: "Remy Duplantis",
+    name: "Rocket Remy",
     car: "f1_turquoise",
     country: "US",
     speedMult: 1.1,
     photo: "./assets/remy_tron.png",
-    origin: "Raleigh, North Carolina",
-    bio: "Raleigh-raised, caffeine-powered, and violently allergic to fantasy. If your game has orcs, ogres, elves, or anything remotely Tolkien-adjacent, Remy will leave the room with a look of genuine disgust. The only acceptable game genre is Formula 1. Everything else is noise. Runs a turquoise F1 car tuned 10% hotter than anything else on the grid because stock settings are for people who read the manual. Her second greatest passion is riding elevators — up and down, up and down, for hours, no destination, just vibes. Has been banned from three office buildings in downtown Raleigh for 'recreational vertical transit.' Her third greatest passion is tormenting Alex Walczyk — reprograms his keyboard shortcuts weekly and once convinced him his SSH keys had expired during a live demo. They call her 'The Streak.' By the time you see the turquoise blur, she's already lapped you.",
+    origin: "River Ridge",
+    bio: "A little faster than everyone else — and the first to cheer you on.",
   },
   leo: {
     id: "leo",
-    name: "Leo Gallego",
+    name: "Lucky Leo",
     car: "f1_purple",
     country: "AR",
     photo: "./assets/leo_tron.png",
-    origin: "Buenos Aires, Argentina",
-    bio: "Leo wrote his first program at age five on a Commodore 64 he found in a dumpster behind a Buenos Aires electronics shop. By twelve he had accidentally penetrated the CIA's internal network and been offered a job by three intelligence agencies before his voice had even broken. Refused all of them because the dress code forbade soccer cleats. Better at soccer than Messi — and Messi knows it. Once nutmegged an entire back line during a charity match while live-debugging a Kubernetes cluster on his phone. Despises broccoli with a fury that borders on religious conviction. Father to a daughter who already types 90 WPM at age four. His purple car is painted the exact frequency of a black light because he believes racing should feel like a rave. Won't brake. Won't yield. Won't eat his vegetables. They call him 'El Rayo.'",
+    origin: "Rainbow Valley",
+    bio: "Soccer star on weekends, quiz champ on the track. Never gives up.",
   },
   michele: {
     id: "michele",
-    name: "Michele Kelley",
+    name: "Mighty Mia",
     car: "f1_pink_gold",
     country: "US",
     photo: "./assets/michele_tron.png",
-    origin: "Cary, North Carolina",
-    bio: "Michele Kelley doesn't use AI — AI uses Michele Kelley, and it's grateful for the opportunity. The undisputed AIOps wizard of the Research Triangle, she runs twenty AI agents simultaneously across Claude Code, Cursor, Google Vertex, Amazon Bedrock, and three platforms she built herself that the rest of the industry hasn't discovered yet. Once connected Cisco Splunk to IBM Instana to ServiceNow in a single pipeline so cursed that all three vendors called to ask her to stop — not because it was broken, but because it was working too well. ServiceNow sent a cease-and-desist wrapped in a job offer. She declined both. Has a standing theory that Splunk dashboards are just astrology for ops engineers, and she will defend this position at any altitude, including the beach, where she conducts most of her architecture reviews from a lounge chair with her toes in the sand. Her pink and gold F1 car has an onboard LLM that trash-talks other drivers in real time. They call her 'The Operator.' Her agents never sleep, and honestly, neither does she.",
+    origin: "Sandy Shores",
+    bio: "Beach-day expert who knows every shortcut and every kindness trick.",
   },
   roger: {
     id: "roger",
-    name: "Roger Lopez",
+    name: "Racer Roy",
     car: "delorean",
     country: "US",
     photo: "./assets/roger_tron.png",
-    origin: "Austin, Texas",
-    bio: "Son of Cuban immigrants who taught him two things: never give up and always season the rice properly. Roger containerized his first application at age fourteen — in 2005, before Docker existed — using a hand-rolled chroot jail he built on a Pentium 4 in his parents' garage. Holds the unofficial record for most pods running on a single OpenShift cluster: 847,000, deployed via an Ansible playbook he wrote during a brisket smoke at Franklin BBQ. Has a standing reservation at every smokehouse on South Congress and once slow-cooked a 14-pound prime brisket for exactly 16 hours — timed to the minute his Helm chart rollout completed. His wife says he loves Kubernetes more than her. He has not denied it. Races his hover-converted DeLorean through the streets of Austin at 2 AM because the traffic is finally reasonable. When 1.21 gigawatts isn't enough, Roger adds more replicas. They call him 'El Orquestador.' Where he's going, he doesn't need roads.",
+    origin: "Clockwork Cove",
+    bio: "Inventor of wild gadgets. His car has a very cool glow button.",
   },
   nuno: {
     id: "nuno",
-    name: "Nuno Martins",
+    name: "Nifty Nuno",
     car: "truck",
     country: "ZA",
     photo: "./assets/nuno_tron.png",
-    origin: "Johannesburg, South Africa",
-    bio: "Part security researcher, part mad scientist, fully unhinged. Nuno reverse-engineers malware before breakfast and builds Faraday cages out of braai grills for fun. When he's not dissecting zero-days, he's riding wild hippos through the Kruger bushveld — the only man the hippos respect. Father of three junior hackers, connoisseur of obscure horror films (the gorier the better), and proud owner of the most heavily fortified home lab in the Southern Hemisphere. His truck runs on diesel, paranoia, and pure adrenaline. The dark web fears him. The hippos obey him.",
+    origin: "Safari Springs",
+    bio: "Adventure kid with a pickup full of helpful tools and stickers.",
   },
   hicham: {
     id: "hicham",
-    name: "Hicham Mourad",
+    name: "Happy Hicham",
     car: "lightcycle",
     country: "CA",
     photo: "./assets/hicham_tron.png",
-    origin: "Ottawa, Canada",
-    bio: "Born in Beirut, forged in Ottawa, fueled by pure maple syrup. Hicham drinks a pint of the dark stuff every morning — Grade A, straight from the can, no pancakes required. Played three hours of hockey daily for twenty years straight and has the missing teeth to prove it. Basically invented the private cloud before anyone knew what a cloud was — spent a decade at VMware virtualizing things that weren't supposed to be virtualizable. His two sons think their dad is a superhero. His French Canadian wife knows he is one. Races motorcycles on weekends because four wheels are for people who need stability. His lightcycle leaves a trail of pure neon. If you see the glow in your mirror, it's already too late. They call him 'The Architect of Clouds.'",
+    origin: "Frostbite Falls",
+    bio: "Hockey fan who streaks down the track like a neon comet.",
   },
   matt: {
     id: "matt",
-    name: "Matthew Packer",
+    name: "Mellow Matt",
     car: "f1_blue_white",
     country: "US",
     photo: "./assets/matt_tron.png",
-    origin: "Greensboro, North Carolina",
-    bio: "Toronto-born, Greensboro-transplanted, and still bleeding Maple Leafs blue despite decades of heartbreak — Matt will defend the Leafs' 'rebuilding year' until the heat death of the universe. Former competitive skateboarder who still kickflips in the driveway to embarrass his two kids. Married to the only person patient enough to tolerate his cloud infrastructure monologues at dinner. Speaks fluent AWS, GCP, and Azure — once deployed the same app across all three in a single afternoon just to prove vendor lock-in is a myth, then wrote a blog post about it that went mildly viral. Keeps his house so clean you could perform surgery on the kitchen counter. Hand sanitizer in every pocket, Lysol wipes in the glove box, and a personal rule that shoes never touch carpet. His new dog has its own bath schedule. Knows every Jewish deli within fifty miles and has strong opinions about pastrami thickness. They call him 'The Sanitizer.' His cloud is spotless, and so is everything else.",
+    origin: "Pine Grove",
+    bio: "Skateboarder at heart. Calm, clean, and always on time for dinner.",
   },
   aubrey: {
     id: "aubrey",
-    name: "Aubrey Trotter",
+    name: "Awesome Aubrey",
     car: "f1_pink",
     country: "US",
     photo: "./assets/aubrey_tron.png",
-    origin: "Durham, North Carolina",
-    bio: "The only driver on the grid who debugs race strategy in her head while doing bedtime stories. Aubrey is a DevOps sorceress from Durham who once deployed a zero-downtime migration across four continents while making dinosaur chicken nuggets for her son. Graduated top of her class, married her college rival (he still can't beat her lap times), and runs the tightest CI pipeline east of the Mississippi. Her pink F1 car isn't a fashion statement — it's a warning. She color-codes everything, including her enemies. Volunteers at the Durham Food Bank on Saturdays, dominates leaderboards on Sundays. Her son thinks she works at NASA. She has not corrected him. They call her 'The Architect.' Nothing gets past The Architect.",
+    origin: "Garden Glen",
+    bio: "Organizes group hugs and color-codes her homework. Pink car, golden heart.",
   },
   alex: {
     id: "alex",
-    name: "Alex Walczyk",
+    name: "Ace Alex",
     car: "f1_yellow",
     country: "US",
     photo: "./assets/alex_tron.png",
-    origin: "Raleigh, North Carolina",
-    bio: "The youngest driver on the grid and already the most dangerous. Alex graduated from NC State University with a degree in computer science and a minor in terrifying his professors. Cracked his first firewall at age 12, broke the campus speed record at 19, and had three job offers from alphabet agencies before he finished his senior thesis. Built his own racing simulator out of a stolen server rack and a go-kart chassis. Holds the unofficial world record for fastest lap while simultaneously compiling a kernel. His car is yellow because he wants you to see him coming. You still won't react in time. They call him 'The Kid.' The kid has never lost.",
+    origin: "Starlight Suburb",
+    bio: "Youngest on the grid and already the fastest puzzle solver in class.",
   },
 };
 
@@ -224,31 +267,25 @@ export const PICKUP_TYPES = [
 ];
 
 export const TUTORIAL_STEPS = [
-  { type: "PLAYBOOK",              kind: "pickup",   lane: 1, tip: "Collect Playbooks for +100 points!",               label: "Collect a Playbook" },
-  {
-    kind: "billboard",
-    lane: -1,
-    tip: "Billboards line the track — click one to open an interactive demo and earn +500 points!",
-    label: "Open a billboard demo",
-  },
-  { type: "CERTIFIED_COLLECTION",  kind: "pickup",   lane: 1, tip: "Collections are worth +150 points!",               label: "Grab a Collection" },
-  { type: "OUTAGE",                kind: "obstacle",  lane: 1, tip: "Dodge Outages — they drain your health!",          label: "Dodge an Outage" },
-  { type: "BRAKE",                 kind: "lesson",    lane: -1, tip: "Hold S or ↓ to brake and slow down.",             label: "Learn to Brake" },
-  { type: "POLICY_SHIELD",         kind: "pickup",   lane: 1, tip: "The purple pickup is a Shield — grab it!",         label: "Pick up a Shield" },
-  { type: "OUTAGE",                kind: "obstacle",  lane: 1, tip: "Shield active! Hit this Outage to test it.",        label: "Test the Shield", mustHit: true },
-  { type: "BOOST_TOKEN",           kind: "pickup",   lane: 1, tip: "Boost Tokens pause for a quiz — answer for speed!",  label: "Ace a Boost Quiz" },
+  { type: "PLAYBOOK", kind: "pickup", lane: 1, tip: "Collect Stars for +100 points!", label: "Collect a Star" },
+  { type: "CERTIFIED_COLLECTION", kind: "pickup", lane: 1, tip: "Gems are worth +150 points!", label: "Grab a Gem" },
+  { type: "OUTAGE", kind: "obstacle", lane: 1, tip: "Dodge puddles — they drain your energy!", label: "Dodge a Puddle" },
+  { type: "BRAKE", kind: "lesson", lane: -1, tip: "Hold S or ↓ to brake and slow down.", label: "Learn to Brake" },
+  { type: "POLICY_SHIELD", kind: "pickup", lane: 1, tip: "The purple pickup is a Shield — grab it!", label: "Pick up a Shield" },
+  { type: "OUTAGE", kind: "obstacle", lane: 1, tip: "Shield active! Hit this puddle to test it.", label: "Test the Shield", mustHit: true },
+  { type: "BOOST_TOKEN", kind: "pickup", lane: 1, tip: "Quiz Boosts pause for a question — answer for speed!", label: "Ace a Quiz Boost" },
 ];
 
 export const TUTORIAL_QUIZ_QUESTION = {
-  prompt: "According to the Q4 2024 Forrester Wave report, who is the leader in infrastructure automation?",
+  prompt: "What should you do before crossing the street?",
   options: [
-    "Red Hat Ansible Automation Platform",
-    "Coyote Automation Suite",
-    "ACME Bloatware Enterprise",
-    "Duct-Tape-as-a-Service",
+    "Run without looking",
+    "Stop, look, and listen",
+    "Close your eyes and hope",
+    "Text your friends",
   ],
-  answer: 0,
-  explanation: "Red Hat Ansible Automation Platform was named a Leader by Forrester.",
+  answer: 1,
+  explanation: "Always stop, look both ways, and listen before you cross.",
 };
 
 export const TUTORIAL_SPAWN_Z = -60;
@@ -257,10 +294,9 @@ export const TUTORIAL_TIP_Z = -18;
 export const LEVELS = {
   A: {
     id: "A",
-    /** URL segment for GitHub Pages (must match index.html & themePath slugs) */
     pathSegment: "AIOps",
-    name: "AIOps",
-    subtitle: "Tame the Alert Storm",
+    name: "City Cruise",
+    subtitle: "Neon streets & bright lights",
     road:     0x556070,
     roadEmissive: 0x1a2030,
     edge:     0x1a1a2e,
@@ -273,43 +309,16 @@ export const LEVELS = {
     sceneBg:  0x0a0e18,
     scenery: "city",
     billboards: [
-      {
-        id: "demo1",
-        label: "Automation for AIOps",
-        accent: 0x00c8ea,
-        logo: "./assets/automation_for_aiops.png",
-        embed:
-          "https://demo.arcade.software/kCuEEAIeU2a8plQcDALz?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true",
-        embedTitle: "Automation for AIOps — Red Hat Ansible Automation Platform",
-        logoObjectFit: "cover",
-      },
-      {
-        id: "demo2",
-        label: "IBM Instana + AAP",
-        accent: 0x00c8ea,
-        logo: "./assets/unlock_aiops_instana_aap_arcade.png",
-        embed:
-          "https://demo.arcade.software/iv4MGA8BVPeEtdjNYmBM?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true",
-        embedTitle: "Unlock AIOps with IBM Instana and Ansible Automation Platform",
-        logoObjectFit: "cover",
-      },
-      {
-        id: "demo3",
-        label: "ServiceNow Leap + MCP",
-        accent: 0xff6644,
-        logo: "./assets/aiops_servicenow_leap_ansible_mcp.png",
-        embed:
-          "https://demo.arcade.software/UAt0jBV2NHwrV3rgaTQr?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true",
-        embedTitle: "Unlock AIOps with ServiceNow Leap and Ansible MCP server",
-        logoObjectFit: "cover",
-      },
+      { id: "a1", label: "Be kind to others!", accent: 0x00ffcc },
+      { id: "a2", label: "Look both ways!", accent: 0xff99cc },
+      { id: "a3", label: "Share with friends", accent: 0xffdd44 },
     ],
   },
   B: {
     id: "B",
     pathSegment: "Workflows",
-    name: "Workflow orchestration",
-    subtitle: "Automation & orchestration",
+    name: "Forest Trail",
+    subtitle: "Trees, trails & fresh air",
     road:     0x555960,
     roadEmissive: 0x0a0a0c,
     edge:     0x446633,
@@ -323,24 +332,16 @@ export const LEVELS = {
     scenery: "forest",
     music: "./assets/audio/bgm-alpine.m4a",
     billboards: [
-      {
-        id: "demo4",
-        label: "Automation orchestrator",
-        accent: 0x44bb66,
-        logo: "./assets/automation_orchestrator_arcade.png",
-        embed:
-          "https://demo.arcade.software/raKv3vTXd9wPndiAUpEJ?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true",
-        embedTitle:
-          "Automation orchestrator — multimodal automation with Ansible Automation Platform",
-        logoObjectFit: "cover",
-      },
+      { id: "b1", label: "Stay on the path", accent: 0x44bb66 },
+      { id: "b2", label: "Wash your hands", accent: 0x88cc88 },
+      { id: "b3", label: "Drink water!", accent: 0xaaddff },
     ],
   },
   C: {
     id: "C",
     pathSegment: "Developer-Experience",
-    name: "Developer experience",
-    subtitle: "Ship automation faster",
+    name: "Sunny Desert",
+    subtitle: "Golden sand & warm breeze",
     road:     0x8b7355,
     roadEmissive: 0x1a1208,
     edge:     0xc4a84a,
@@ -354,41 +355,16 @@ export const LEVELS = {
     scenery: "desert",
     music: "./assets/audio/bgm-desert.m4a",
     billboards: [
-      {
-        id: "demo7",
-        label: "Ansible Dev Container in VS Code",
-        accent: 0xff8844,
-        logo: "./assets/installing_ansible_dev_container_in_vscode.png",
-        embed:
-          "https://demo.arcade.software/iKoPpilaNueRFTUzWnqL?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true",
-        embedTitle: "Installing Ansible Dev Container in VS Code",
-        logoObjectFit: "cover",
-      },
-      {
-        id: "demo8",
-        label: "Cursor + MCP for AAP",
-        accent: 0xcc4466,
-        logo: "./assets/cursor_mcp_aap_youtube_thumbnail.png",
-        embed: "https://www.youtube.com/embed/EidwVmZQkGM?rel=0",
-        embedTitle: "How to set up Cursor with MCP for Ansible Automation Platform",
-        logoObjectFit: "cover",
-      },
-      {
-        id: "demo9",
-        label: "Copilot Studio + MCP",
-        accent: 0x44ccaa,
-        logo: "./assets/copilot_studio_mcp_aap_youtube_thumbnail.png",
-        embed: "https://www.youtube.com/embed/ok_ID1Ldgds?rel=0",
-        embedTitle: "Talk to your Ansible Automation Platform with AI — Copilot Studio + MCP",
-        logoObjectFit: "cover",
-      },
+      { id: "c1", label: "Wear sunscreen", accent: 0xff8844 },
+      { id: "c2", label: "Take breaks in the shade", accent: 0xffcc66 },
+      { id: "c3", label: "Save water", accent: 0x44ccaa },
     ],
   },
   D: {
     id: "D",
     pathSegment: "Policy-and-governance",
-    name: "Governance & compliance",
-    subtitle: "Compliance at speed",
+    name: "Marshland",
+    subtitle: "Frogs, reeds & squishy mud",
     road:     0x3a3828,
     roadEmissive: 0x0a0a04,
     edge:     0x4a5530,
@@ -402,44 +378,16 @@ export const LEVELS = {
     scenery: "swamp",
     music: "./assets/audio/bgm-swamp.m4a",
     billboards: [
-      {
-        id: "demo11",
-        label: "Ansible secrets + Vault",
-        accent: 0xaacc22,
-        logo: "./assets/manage_ansible_secrets_with_hashicorp_vault.png",
-        embed:
-          "https://demo.arcade.software/8wSFxhB1CT2w7Z7OWsyz?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true",
-        embedTitle: "Manage Ansible secrets with HashiCorp Vault",
-        logoObjectFit: "cover",
-      },
-      {
-        id: "demo12",
-        label: "Multilayered Policy enforcement",
-        accent: 0x44aa88,
-        logo: "./assets/multilayered_policy_enforcement_aap_arcade.png",
-        embed:
-          "https://demo.arcade.software/WSh5uLpMzwN5Eb4ojTK7?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true",
-        embedTitle:
-          "Multilayered Policy enforcement with Ansible Automation Platform",
-        logoObjectFit: "cover",
-      },
-      {
-        id: "demo13",
-        label: "Zero Trust with AAP",
-        accent: 0x88aa66,
-        logo: "./assets/zero_trust_with_aap_arcade.png",
-        embed:
-          "https://demo.arcade.software/IW69tA3kUgJdtNaOWZB1?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true",
-        embedTitle: "Zero Trust with Ansible Automation Platform",
-        logoObjectFit: "cover",
-      },
+      { id: "d1", label: "Tell a trusted adult", accent: 0xaacc22 },
+      { id: "d2", label: "Never share passwords", accent: 0x44aa88 },
+      { id: "d3", label: "Ask before you go", accent: 0x88aa66 },
     ],
   },
   E: {
     id: "E",
     pathSegment: "Infrastructure-and-network",
-    name: "Network & infrastructure",
-    subtitle: "Day 2 at machine speed",
+    name: "Ocean Drive",
+    subtitle: "Beach waves & salty air",
     road:     0x445566,
     roadEmissive: 0x060810,
     edge:     0x3388aa,
@@ -453,47 +401,16 @@ export const LEVELS = {
     scenery: "water",
     music: "./assets/audio/bgm-ocean.m4a",
     billboards: [
-      {
-        id: "demo13",
-        /** Fully seaward of thin beach strip (~|x|≤12.4); poles ±5.2 from center */
-        x: -19.5,
-        label: "Virtualization infrastructure",
-        accent: 0x44aaff,
-        logo: "./assets/virtualization_infrastructure_ansible_arcade.png",
-        embed:
-          "https://demo.arcade.software/KlhYhTinO6JIaYtLV6uk?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true",
-        embedTitle: "Virtualization infrastructure automation with Red Hat Ansible",
-        logoObjectFit: "cover",
-      },
-      {
-        id: "demo14",
-        x: 20,
-        label: "RHEL automated management",
-        accent: 0xaaddff,
-        logo: "./assets/rhel_automated_management_arcade.png",
-        embed:
-          "https://demo.arcade.software/b4bwKoXtWj5DSaSuBjIX?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true",
-        embedTitle: "Red Hat Enterprise Linux automated management",
-        logoObjectFit: "cover",
-      },
-      {
-        id: "demo15",
-        x: 35,
-        label: "Windows VM Day 2 ops",
-        accent: 0x6688cc,
-        logo: "./assets/automating_day_2_windows_vm_operations.png",
-        embed:
-          "https://demo.arcade.software/oBoXzgiggcwGdG5DzosF?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true",
-        embedTitle: "Automating Day 2 Windows VM operations",
-        logoObjectFit: "cover",
-      },
+      { id: "e1", label: "Swim with a buddy", accent: 0x44aaff },
+      { id: "e2", label: "Wear a life jacket", accent: 0xaaddff },
+      { id: "e3", label: "Respect the ocean", accent: 0x6688cc },
     ],
   },
   F: {
     id: "F",
     pathSegment: "AAP-on-cloud",
-    name: "Cloud automation",
-    subtitle: "Automate across clouds",
+    name: "Snowy Peaks",
+    subtitle: "Sparkly ice & chilly fun",
     road:     0x667788,
     roadEmissive: 0x0a0c10,
     edge:     0x8899aa,
@@ -507,44 +424,16 @@ export const LEVELS = {
     scenery: "snow",
     music: "./assets/audio/bgm-snow.m4a",
     billboards: [
-      {
-        id: "demo16",
-        label: "Self-healing Google Cloud",
-        accent: 0x22ccff,
-        logo: "./assets/aiops_self_healing_google_cloud_infrastructure_aap.png",
-        embed:
-          "https://demo.arcade.software/QIkx7TMuu22RDi0nUjRA?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true",
-        embedTitle:
-          "AIOps — Self-healing Google Cloud Infrastructure with AAP",
-        logoObjectFit: "cover",
-      },
-      {
-        id: "demo17",
-        label: "Self-healing on AWS",
-        accent: 0x44ffcc,
-        logo: "./assets/aiops_self_healing_aws_infrastructure_aap.png",
-        embed:
-          "https://demo.arcade.software/qYeocEdiSCHFkKXytJMe?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true",
-        embedTitle: "AIOps: Self-Healing AWS Infrastructure with AAP",
-        logoObjectFit: "cover",
-      },
-      {
-        id: "demo18",
-        label: "Ansible Automation on AWS",
-        accent: 0x88aaff,
-        logo: "./assets/ansible_automation_on_aws.png",
-        embed:
-          "https://demo.arcade.software/g25qlmX59RI0r6OjRjL2?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true",
-        embedTitle: "Ansible Automation on AWS",
-        logoObjectFit: "cover",
-      },
+      { id: "f1", label: "Bundle up warm!", accent: 0x22ccff },
+      { id: "f2", label: "Walk carefully on ice", accent: 0x44ffcc },
+      { id: "f3", label: "Help shovel the path", accent: 0x88aaff },
     ],
   },
   G: {
     id: "G",
     pathSegment: "Metrics-and-telemetry",
-    name: "Automation ROI",
-    subtitle: "Visibility for operators",
+    name: "Coastal Highway",
+    subtitle: "Cliffs, coast & sunshine",
     road:     0x555555,
     roadEmissive: 0x080808,
     edge:     0xcc8844,
@@ -559,38 +448,16 @@ export const LEVELS = {
     music: "./assets/audio/bgm-coast.m4a",
     curve: { amplitude: 5, frequency: 0.018 },
     billboards: [
-      {
-        id: "demo19",
-        /** Set back from lane edge — reads less “stuck to” the yellow line */
-        x: 26,
-        label: "Ansible Automation Dashboard installation",
-        accent: 0xff8822,
-        logo: "./assets/dashboard_installation.jpg",
-        embed:
-          "https://demo.arcade.software/rRlctHhxxxojPuls1oui?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true",
-        embedTitle: "Ansible Automation Dashboard installation",
-        logoObjectFit: "cover",
-      },
-      {
-        id: "demo20",
-        /** Same Z as demo19 — spaced centers clear ~11m-wide faces */
-        x: 42,
-        label: "Automation Dashboard",
-        accent: 0xffcc44,
-        logo: "./assets/Automation_dashboard.jpg",
-        embed:
-          "https://demo.arcade.software/G1lEX5P4rjLgAS3sjsC7?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true",
-        embedTitle: "Automation Dashboard",
-        logoObjectFit: "cover",
-      },
+      { id: "g1", label: "Save your pocket money", accent: 0xff8822 },
+      { id: "g2", label: "Needs before wants", accent: 0xffcc44 },
+      { id: "g3", label: "Count your coins", accent: 0xffaa66 },
     ],
   },
   H: {
     id: "H",
     pathSegment: "AAP-101",
-    name: "Red Hat Ansible 101",
-    subtitle: "Operator / ops quickstart",
-    /** Lighter asphalt than old near-black so dark cars stay visible on night Durham */
+    name: "Meadow Loop",
+    subtitle: "Rolling hills & wildflowers",
     road:     0x5a5e6a,
     roadEmissive: 0x161a24,
     edge:     0x1a1a2e,
@@ -604,44 +471,16 @@ export const LEVELS = {
     scenery: "durham",
     music: "./assets/audio/bgm-durham.m4a",
     billboards: [
-      {
-        id: "demo22",
-        label: "Deploy & remove apps on RHEL",
-        accent: 0xcc0000,
-        logo: "./assets/aap_deploy_remove_apps_rhel.png",
-        embed:
-          "https://demo.arcade.software/WLz8bjVZ1Tw1ie8KBv7f?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true",
-        embedTitle: "AAP — deploy and remove apps on RHEL",
-        logoObjectFit: "cover",
-      },
-      {
-        id: "demo23",
-        label: "Automation intelligent assistant",
-        accent: 0x0088cc,
-        logo: "./assets/automation_intelligent_assistant.png",
-        embed:
-          "https://demo.arcade.software/6104eaB6sLcy5LB1oAzi?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true",
-        embedTitle: "Automation intelligent assistant — Red Hat Ansible Automation Platform",
-        logoObjectFit: "cover",
-      },
-      {
-        id: "demo24",
-        label: "Provision Ansible in Developer Sandbox",
-        accent: 0xff9900,
-        logo: "./assets/provision_ansible_dev_sandbox.png",
-        embed:
-          "https://demo.arcade.software/tE9tlgwEwnXUUqqUWxW5?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true",
-        embedTitle: "Provision Ansible in Developer Sandbox",
-        logoObjectFit: "cover",
-      },
+      { id: "h1", label: "Eat your veggies!", accent: 0xcc0000 },
+      { id: "h2", label: "Brush your teeth", accent: 0x0088cc },
+      { id: "h3", label: "Get plenty of sleep", accent: 0xff9900 },
     ],
   },
   DS: {
     id: "DS",
     pathSegment: "Death-Star-Trench",
-    name: "Death Star Trench",
-    subtitle: "May the Fourth be with you",
-    /** Death Star surface grey — readable, not crushed to black */
+    name: "Star Canyon",
+    subtitle: "Night sky dash",
     road:     0x5c5e68,
     roadEmissive: 0x181c24,
     edge:     0x6a6c78,
@@ -649,24 +488,20 @@ export const LEVELS = {
     laneMarker: 0xa8aeb8,
     side:     0x4a4c58,
     sideEmissive: 0x1a1c28,
-    /** Near-black fog so distance fades to space, not a gray “cloud”. */
     fog:      0x040508,
     sky:      0x000000,
     sceneBg:  0x000000,
     scenery: "trench",
     music: "./assets/audio/trench-run.m4a",
     billboards: [
-      { id: "ds1", label: "Thermal exhaust port", accent: 0xffcc00 },
-      { id: "ds2", label: "Stay on target", accent: 0xcc3333 },
-      { id: "ds3", label: "Use the automation", accent: 0x4488ff },
+      { id: "ds1", label: "Dream big!", accent: 0xffcc00 },
+      { id: "ds2", label: "Reach for the stars", accent: 0xcc3333 },
+      { id: "ds3", label: "Stay curious", accent: 0x4488ff },
     ],
   },
 };
 
-/** Summit Booth Themes site (paired booth pages — keep in sync with summit-booth-themes repo) */
-export const SUMMIT_BOOTH_BASE = "https://ansible-tmm.github.io/summit26";
-
-export function getSummitBoothThemeUrl(levelId) {
-  const seg = LEVELS[levelId]?.pathSegment;
-  return seg ? `${SUMMIT_BOOTH_BASE}/${seg}/` : null;
+/** Legacy — summit booth links removed for kids build. */
+export function getSummitBoothThemeUrl() {
+  return null;
 }

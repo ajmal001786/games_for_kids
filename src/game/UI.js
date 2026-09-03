@@ -1,11 +1,23 @@
-import { getLeaderboard, loadAchievements, ACHIEVEMENT_DEFS, getDeathStarTrenchUnlocked } from "../utils/storage.js";
+import { getLeaderboard, loadAchievements, ACHIEVEMENT_DEFS } from "../utils/storage.js";
 import { fetchGlobalLeaderboard } from "../utils/firebase.js";
 import * as THREE from "three";
-import { LEVELS, DRIVERS, getSummitBoothThemeUrl } from "../data/config.js";
+import { CONFIG, LEVELS, DRIVERS, DISPLAY, getSummitBoothThemeUrl } from "../data/config.js";
 import { Player } from "./Player.js";
+import { getAvatarById, getSelectableAvatars, getSetIdForAvatar } from "../data/avatars.js";
+import { REWARD_DEFS } from "../data/rewards.js";
+import {
+  hydrateProfiles,
+  getActiveProfile,
+  getActiveSlot,
+  setActiveSlot,
+  updateActiveProfile,
+  loadProfiles,
+  displayName,
+  escapeHtml,
+} from "../utils/profile.js";
 
 /**
- * DOM overlays + HUD updates (Built to Automate)
+ * DOM overlays + HUD updates (Life Skills Racers)
  */
 export class UI {
   constructor() {
@@ -136,9 +148,25 @@ export class UI {
       gzFinalScore: document.getElementById("gz-final-score"),
       gzFinalCrushed: document.getElementById("gz-final-crushed"),
       gzFinalPct: document.getElementById("gz-final-pct"),
+
+      hudPlayer: document.getElementById("hud-player"),
+      hudPlayerFace: document.getElementById("hud-player-face"),
+      hudPlayerName: document.getElementById("hud-player-name"),
+      goPlayer: document.getElementById("go-player"),
+      goPlayerFace: document.getElementById("go-player-face"),
+      goPlayerName: document.getElementById("go-player-name"),
+      lcPlayer: document.getElementById("lc-player"),
+      lcPlayerFace: document.getElementById("lc-player-face"),
+      lcPlayerName: document.getElementById("lc-player-name"),
+      kidSetup: document.getElementById("kid-setup"),
+      kidName: document.getElementById("kid-name"),
+      kidAvatarGrid: document.getElementById("kid-avatar-grid"),
+      menuCollection: document.getElementById("menu-collection"),
+      collectionGrid: document.getElementById("collection-grid"),
     };
 
     this._selectedDriver = "anshul";
+    this._avatarSetId = "animals";
     this._statusTimer = null;
     this._recoveryCountdownId = null;
     this._recoveryAutoTimer = null;
@@ -155,6 +183,7 @@ export class UI {
     this._drawLevelPreviews();
     this._syncSummitDockVisibility();
     this._mobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+    this._initKidSetup();
   }
 
   get isMobile() { return this._mobile; }
@@ -173,18 +202,192 @@ export class UI {
       "btn-choose-driver",
     ];
     if (!hideHowTo) ids.push("btn-how-to-play");
-    ids.push("btn-highscores", "btn-achievements", "btn-credits");
+    ids.push("btn-highscores", "btn-collection", "btn-achievements", "btn-credits");
     this._menuBtns = ids.map((id) => document.getElementById(id)).filter(Boolean);
     if (this._menuIdx >= this._menuBtns.length) this._menuIdx = 0;
     this._updateMenuFocus();
   }
 
+  _initKidSetup() {
+    hydrateProfiles();
+    const nameInput = this.el.kidName;
+    if (nameInput) {
+      nameInput.addEventListener("input", () => {
+        updateActiveProfile({ name: nameInput.value.slice(0, CONFIG.PROFILE.NAME_MAX) });
+        this._refreshKidSetup({ skipGrid: true, keepName: true });
+        this.setPlayerBadge();
+      });
+      nameInput.addEventListener("keydown", (e) => e.stopPropagation());
+    }
+
+    document.querySelectorAll(".kid-age").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        updateActiveProfile({ age: Number(btn.dataset.age) });
+        this._refreshKidSetup({ skipGrid: true });
+        const hint = document.getElementById("kid-setup-hint");
+        if (hint) hint.classList.add("hidden");
+        if (this.onProfileChange) this.onProfileChange();
+      });
+      btn.addEventListener("keydown", (e) => this._onKidGroupKey(e, ".kid-age"));
+    });
+
+    document.querySelectorAll(".kid-profile").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        setActiveSlot(Number(btn.dataset.slot));
+        const p = getActiveProfile();
+        this._avatarSetId = getSetIdForAvatar(p.avatar);
+        this._refreshKidSetup();
+        this.setPlayerBadge();
+      });
+      btn.addEventListener("keydown", (e) => this._onKidGroupKey(e, ".kid-profile"));
+    });
+
+    document.querySelectorAll(".kid-set-tab").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        this._avatarSetId = btn.dataset.set;
+        this._refreshKidSetup();
+      });
+      btn.addEventListener("keydown", (e) => this._onKidGroupKey(e, ".kid-set-tab"));
+    });
+
+    const p = getActiveProfile();
+    this._avatarSetId = getSetIdForAvatar(p.avatar);
+    this._refreshKidSetup();
+    this.setPlayerBadge();
+  }
+
+  _onKidGroupKey(e, selector) {
+    if (e.code !== "ArrowLeft" && e.code !== "ArrowRight" && e.code !== "ArrowUp" && e.code !== "ArrowDown") {
+      return;
+    }
+    const nodes = [...document.querySelectorAll(selector)];
+    const idx = nodes.indexOf(e.currentTarget);
+    if (idx < 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const next = e.code === "ArrowLeft" || e.code === "ArrowUp"
+      ? (idx - 1 + nodes.length) % nodes.length
+      : (idx + 1) % nodes.length;
+    nodes[next].focus();
+  }
+
+  _refreshKidSetup(opts = {}) {
+    const p = getActiveProfile();
+    const slot = getActiveSlot();
+    if (this.el.kidName && !opts.keepName) {
+      this.el.kidName.value = p.name || "";
+    }
+
+    document.querySelectorAll(".kid-age").forEach((btn) => {
+      const on = p.age != null && Number(btn.dataset.age) === Number(p.age);
+      btn.classList.toggle("selected", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+
+    const profiles = loadProfiles();
+    document.querySelectorAll(".kid-profile").forEach((btn) => {
+      const i = Number(btn.dataset.slot);
+      const prof = profiles[i];
+      const label = (prof && prof.name && prof.name.trim()) ? prof.name.trim() : `P${i + 1}`;
+      btn.textContent = label;
+      btn.setAttribute("aria-label", `Player slot ${i + 1}${prof && prof.name ? ": " + prof.name : ""}`);
+      const on = i === slot;
+      btn.classList.toggle("selected", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+
+    document.querySelectorAll(".kid-set-tab").forEach((btn) => {
+      const on = btn.dataset.set === this._avatarSetId;
+      btn.classList.toggle("selected", on);
+      btn.setAttribute("aria-selected", on ? "true" : "false");
+    });
+
+    if (!opts.skipGrid) this._renderAvatarGrid();
+  }
+
+  _renderAvatarGrid() {
+    const grid = this.el.kidAvatarGrid;
+    if (!grid) return;
+    const p = getActiveProfile();
+    const unlocked = Array.isArray(p.rewards) ? p.rewards : [];
+    const avatars = getSelectableAvatars(this._avatarSetId, unlocked);
+    grid.innerHTML = "";
+    if (avatars.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "kid-avatar-empty";
+      empty.textContent = this._avatarSetId === "bonus"
+        ? "Win races and answer quizzes to unlock bonus faces!"
+        : "No avatars in this set yet.";
+      grid.appendChild(empty);
+      return;
+    }
+    avatars.forEach((av) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "kid-avatar-btn";
+      btn.dataset.avatar = av.id;
+      btn.setAttribute("role", "option");
+      btn.setAttribute("aria-label", av.name);
+      const on = av.id === p.avatar;
+      btn.classList.toggle("selected", on);
+      btn.setAttribute("aria-selected", on ? "true" : "false");
+      btn.innerHTML =
+        `<span class="kid-avatar-face" style="background:${av.color}">${av.emoji}</span>` +
+        `<span class="kid-avatar-name">${escapeHtml(av.name)}</span>`;
+      btn.addEventListener("click", () => {
+        updateActiveProfile({ avatar: av.id });
+        this._refreshKidSetup();
+        this.setPlayerBadge();
+      });
+      btn.addEventListener("keydown", (e) => this._onAvatarGridKey(e));
+      grid.appendChild(btn);
+    });
+  }
+
+  _onAvatarGridKey(e) {
+    const buttons = [...(this.el.kidAvatarGrid?.querySelectorAll(".kid-avatar-btn") || [])];
+    const idx = buttons.indexOf(e.currentTarget);
+    if (idx < 0) return;
+    const cols = 4;
+    let next = idx;
+    if (e.code === "ArrowRight") next = (idx + 1) % buttons.length;
+    else if (e.code === "ArrowLeft") next = (idx - 1 + buttons.length) % buttons.length;
+    else if (e.code === "ArrowDown") next = Math.min(buttons.length - 1, idx + cols);
+    else if (e.code === "ArrowUp") next = Math.max(0, idx - cols);
+    else if (e.code === "Enter" || e.code === "Space") {
+      e.preventDefault();
+      e.stopPropagation();
+      e.currentTarget.click();
+      return;
+    } else {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    buttons[next]?.focus();
+  }
+
+  setPlayerBadge() {
+    const p = getActiveProfile();
+    const av = getAvatarById(p.avatar);
+    const name = displayName(p);
+    const apply = (wrap, face, nameEl) => {
+      if (!wrap || !face || !nameEl) return;
+      wrap.classList.remove("hidden");
+      face.textContent = av.emoji;
+      face.style.background = av.color || "#445";
+      nameEl.textContent = name;
+    };
+    apply(this.el.hudPlayer, this.el.hudPlayerFace, this.el.hudPlayerName);
+    apply(this.el.goPlayer, this.el.goPlayerFace, this.el.goPlayerName);
+    apply(this.el.lcPlayer, this.el.lcPlayerFace, this.el.lcPlayerName);
+  }
+
   syncDeathStarTrenchCardVisibility() {
     const card = document.querySelector(".level-card-ds");
     if (!card) return;
-    const on = getDeathStarTrenchUnlocked();
-    card.classList.toggle("hidden", !on);
-    card.setAttribute("aria-hidden", on ? "false" : "true");
+    card.classList.remove("hidden");
+    card.setAttribute("aria-hidden", "false");
   }
 
   refreshLevelSelectPreviews() {
@@ -229,13 +432,30 @@ export class UI {
       const b = document.getElementById(id);
       if (b) b.addEventListener("click", fn);
     };
-    on("btn-start", () => { if (this.onStart) this.onStart(); });
+    on("btn-start", () => {
+      const p = getActiveProfile();
+      if (p.age == null) {
+        const hint = document.getElementById("kid-setup-hint");
+        if (hint) {
+          hint.textContent = "Pick your age first (7, 9, or 11)!";
+          hint.classList.remove("hidden");
+        }
+        const ageBtn = document.getElementById("kid-age-7");
+        if (ageBtn) ageBtn.focus();
+        return;
+      }
+      const hint = document.getElementById("kid-setup-hint");
+      if (hint) hint.classList.add("hidden");
+      if (this.onStart) this.onStart();
+    });
     on("btn-how-to-play", () => this._openTutorial());
     on("btn-tutorial-back", () => this._closeTutorialToMenu());
     on("btn-tutorial-got-it", () => { if (this.onTutorialGotIt) this.onTutorialGotIt(); });
     on("btn-skip-tutorial", () => { if (this.onSkipTutorial) this.onSkipTutorial(); });
     on("btn-highscores", () => this._showMenuLeaderboard());
     on("btn-lb-back", () => this._hideMenuLeaderboard());
+    on("btn-collection", () => this._showMenuCollection());
+    on("btn-collection-back", () => this._hideMenuCollection());
     on("btn-achievements", () => this._showMenuAchievements());
     on("btn-ach-back", () => this._hideMenuAchievements());
     on("btn-credits", () => this._showMenuCredits());
@@ -337,6 +557,9 @@ export class UI {
 
     window.addEventListener("keydown", (e) => {
       if (!this._isMainMenuActive()) return;
+      const tag = (e.target && e.target.tagName) || "";
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (e.target && e.target.closest && e.target.closest("#kid-setup")) return;
       if (e.code === "ArrowUp" || e.code === "ArrowLeft") {
         e.preventDefault();
         this._menuIdx = (this._menuIdx - 1 + this._menuBtns.length) % this._menuBtns.length;
@@ -402,6 +625,7 @@ export class UI {
     this.onSkipTutorial = h.onSkipTutorial;
     this.onTutorialGotIt = h.onTutorialGotIt;
     this.onAttractScoresHidden = h.onAttractScoresHidden;
+    this.onProfileChange = h.onProfileChange;
   }
 
   showMainMenu(visible) {
@@ -410,6 +634,11 @@ export class UI {
     if (visible) {
       this._menuIdx = 0;
       this._updateMenuFocus();
+      this._refreshKidSetup();
+      this.setPlayerBadge();
+      if (this.el.menuCollection && !this.el.menuCollection.classList.contains("hidden")) {
+        this.renderCollection();
+      }
     }
     this._syncSummitDockVisibility();
   }
@@ -647,10 +876,7 @@ export class UI {
    */
   _syncSummitDockVisibility() {
     const dock = document.getElementById("summit-booth-back-wrap");
-    if (!dock) return;
-    const show = this._isMainMenuActive();
-    const isDs = this._summitLinkLevelId === "DS";
-    dock.classList.toggle("hidden", !show || isDs);
+    if (dock) dock.classList.add("hidden");
   }
 
   _isMainMenuActive() {
@@ -660,7 +886,8 @@ export class UI {
       && (!this.el.driverSelect || this.el.driverSelect.classList.contains("hidden"))
       && (!this.el.levelSelect || this.el.levelSelect.classList.contains("hidden"))
       && (!lb || lb.classList.contains("hidden"))
-      && (!this.el.menuAchievements || this.el.menuAchievements.classList.contains("hidden"));
+      && (!this.el.menuAchievements || this.el.menuAchievements.classList.contains("hidden"))
+      && (!this.el.menuCollection || this.el.menuCollection.classList.contains("hidden"));
   }
 
   /** Default main menu (not sub-panels / attract scores) — billboards use this for hit-testing. */
@@ -702,7 +929,11 @@ export class UI {
           row.style.animationDelay = `${i * 0.08}s`;
           const flag = this._countryFlag(entry.country);
           const lvl = this._levelLabel(entry.level);
-          row.innerHTML = `<span class="rank">${i + 1}.</span>${flag ? `<span class="flag">${flag}</span>` : ""}<span class="name">${entry.name}</span>${lvl ? `<span class="level">${lvl}</span>` : ""}<span class="pts">${Math.floor(entry.score).toLocaleString()}</span>`;
+          const av = getAvatarById(entry.avatar);
+          const face = av
+            ? `<span class="lb-avatar" style="background:${av.color}">${av.emoji}</span>`
+            : "";
+          row.innerHTML = `<span class="rank">${i + 1}.</span>${flag ? `<span class="flag">${flag}</span>` : ""}${face}<span class="name">${escapeHtml(entry.name)}</span>${lvl ? `<span class="level">${lvl}</span>` : ""}<span class="pts">${Math.floor(entry.score).toLocaleString()}</span>`;
           list.appendChild(row);
         });
       }
@@ -742,7 +973,7 @@ export class UI {
 
   startQuizCountdown(onExpire) {
     this.stopQuizCountdown();
-    let remaining = 10;
+    let remaining = CONFIG.QUIZ_ANSWER_SECONDS;
     const cd = this.el.quizCountdown;
     if (cd) {
       cd.textContent = String(remaining);
@@ -752,7 +983,7 @@ export class UI {
       remaining--;
       if (cd) {
         cd.textContent = String(Math.max(0, remaining));
-        cd.classList.toggle("urgent", remaining <= 3);
+        cd.classList.toggle("urgent", remaining <= 5);
       }
       if (remaining <= 0) {
         this.stopQuizCountdown();
@@ -831,11 +1062,11 @@ export class UI {
     el.setAttribute("aria-hidden", "false");
   }
 
-  showAchievement(name, desc) {
+  showAchievement(name, desc, title = "Achievement Unlocked") {
     const el = this.el.achievementPopup;
     if (!el) return;
     el.classList.remove("hidden", "show");
-    el.innerHTML = `<div class="ach-title">Achievement Unlocked</div><div class="ach-name">${name}</div><div class="ach-desc">${desc}</div>`;
+    el.innerHTML = `<div class="ach-title">${escapeHtml(title)}</div><div class="ach-name">${escapeHtml(name)}</div><div class="ach-desc">${escapeHtml(desc)}</div>`;
     void el.offsetWidth;
     el.classList.add("show");
     clearTimeout(this._achTimer);
@@ -843,6 +1074,25 @@ export class UI {
       el.classList.remove("show");
       el.classList.add("hidden");
     }, 4000);
+  }
+
+  showRewardUnlocks(defs) {
+    if (!defs || !defs.length) return;
+    this._rewardQueue = (this._rewardQueue || []).concat(defs);
+    this._pumpRewardQueue();
+  }
+
+  _pumpRewardQueue() {
+    if (this._rewardBusy) return;
+    const next = (this._rewardQueue || []).shift();
+    if (!next) return;
+    this._rewardBusy = true;
+    this.showAchievement(next.name, `You earned the ${next.name}!`, "You earned a reward!");
+    clearTimeout(this._rewardPumpTimer);
+    this._rewardPumpTimer = setTimeout(() => {
+      this._rewardBusy = false;
+      this._pumpRewardQueue();
+    }, 4200);
   }
 
   showAchievementsMenu(defs, unlocked) {
@@ -996,6 +1246,7 @@ export class UI {
 
   showHud(visible) {
     this.el.hud.classList.toggle("hidden", !visible);
+    if (visible) this.setPlayerBadge();
     if (!visible) this.closeMobileHud();
   }
 
@@ -1188,7 +1439,8 @@ export class UI {
       if (row) row.classList.toggle("hidden", hideNameEntry);
     }
     if (this.el.goNameInput) {
-      this.el.goNameInput.value = lastName || "";
+      const fromProfile = getActiveProfile().name;
+      this.el.goNameInput.value = fromProfile || lastName || "";
       if (!hideNameEntry) {
         setTimeout(() => this.el.goNameInput.focus(), 80);
       }
@@ -1244,57 +1496,24 @@ export class UI {
     if (this.el.lcPickups) this.el.lcPickups.textContent = String(stats.pickups);
     if (this.el.lcCorrect) this.el.lcCorrect.textContent = String(stats.correct);
     if (isCheater) {
-      if (cheaterType === "deathstar") {
-        if (this.el.lcTitle) this.el.lcTitle.textContent = "Trench run complete";
-        if (this.el.lcMessage) this.el.lcMessage.textContent =
-          "The Force was with you — but trench runs stay off the leaderboard. Use the automation, Luke.";
-      } else if (cheaterType === "hippo") {
-        if (this.el.lcTitle) this.el.lcTitle.textContent = "🦛 Hippo Mode Complete!";
-        if (this.el.lcMessage) this.el.lcMessage.textContent =
-          "Sorry, hippo mode can't be on the leaderboard. Stop cheating!";
-      } else if (cheaterType === "scaloneta") {
-        if (this.el.lcTitle) this.el.lcTitle.textContent = "🇦🇷 ¡La Scaloneta llegó! 🇦🇷";
-        if (this.el.lcMessage) this.el.lcMessage.textContent =
-          "¡Campeones del mundo no necesitan leaderboard! Pero qué lindo paseo, papá.";
-      } else if (cheaterType === "f16") {
-        if (this.el.lcTitle) this.el.lcTitle.textContent = "✈️ Mission Complete, Maverick ✈️";
-        if (this.el.lcMessage) this.el.lcMessage.textContent =
-          "You feel the need... the need for speed. But fighter jets can't be on the leaderboard.";
-      } else if (cheaterType === "trex") {
-        if (this.el.lcTitle) this.el.lcTitle.textContent = "🦖 Extinction-Level Finish! 🦖";
-        if (this.el.lcMessage) this.el.lcMessage.textContent =
-          "Life found a way... but T-Rex arms can't reach the leaderboard. Those tiny arms!";
-      } else if (cheaterType === "cadillac") {
-        if (this.el.lcTitle) this.el.lcTitle.textContent = "🌟 And The Oscar Goes To... 🌟";
-        if (this.el.lcMessage) this.el.lcMessage.textContent =
-          "Darling, you were fabulous! But Hollywood stars don't need leaderboards — they have fans.";
-      } else if (cheaterType === "ogre") {
-        if (this.el.lcTitle) this.el.lcTitle.textContent = "🧌 The Quest Is Complete! 🧌";
-        if (this.el.lcMessage) this.el.lcMessage.textContent =
-          "The ogre has conquered the kingdom! But ogres don't do leaderboards — they do swamps.";
-      } else if (cheaterType === "crooner") {
-        if (this.el.lcTitle) this.el.lcTitle.textContent = "🎤 It's Simply Too Good! 🎤";
-        if (this.el.lcMessage) this.el.lcMessage.textContent =
-          "You're driving with the Driving Crooner, baby! But I gotta figure out how to make money on this — not leaderboards.";
-      } else if (cheaterType === "timetrain") {
-        if (this.el.lcTitle) this.el.lcTitle.textContent = "🚂 Great Scott! 🚂";
-        if (this.el.lcMessage) this.el.lcMessage.textContent =
-          "You made it to the future! But where we're going, we don't need leaderboards.";
-      } else if (cheaterType === "bicycle") {
-        if (this.el.lcTitle) this.el.lcTitle.textContent = "🚲 Go Leafs Go! 🚲";
-        if (this.el.lcMessage) this.el.lcMessage.textContent =
-          "Hicham pedaled his way to victory! The Architect of Clouds conquers on two wheels. No leaderboard though, eh?";
-      } else {
-        if (this.el.lcTitle) this.el.lcTitle.textContent = "Nice Finish... Cheater";
-        if (this.el.lcMessage) this.el.lcMessage.textContent =
-          "Playing as Andrius is basically cheating. Pick a real driver and try again — if you dare.";
-      }
+      if (this.el.lcTitle) this.el.lcTitle.textContent = "Nice Finish!";
+      if (this.el.lcMessage) this.el.lcMessage.textContent =
+        "That run used a special mode, so it won't go on the leaderboard. Try again with your regular car!";
       if (this.el.lcEntry) this.el.lcEntry.classList.add("hidden");
     } else {
-      if (this.el.lcTitle) this.el.lcTitle.textContent = "Level Complete!";
+      if (this.el.lcTitle) {
+        this.el.lcTitle.textContent = cheaterType === "starcanyon"
+          ? "Star Canyon Complete!"
+          : "Level Complete!";
+      }
       const bonus = stats.finishBonus || 0;
-      if (this.el.lcMessage) this.el.lcMessage.textContent =
-        bonus > 0 ? `Finish bonus: +${bonus.toLocaleString()} points!` : "";
+      if (this.el.lcMessage) {
+        this.el.lcMessage.textContent = cheaterType === "starcanyon" && bonus <= 0
+          ? "You raced through the night sky — great job!"
+          : bonus > 0
+            ? `Finish bonus: +${bonus.toLocaleString()} points!`
+            : "";
+      }
       if (this.el.lcEntry) this.el.lcEntry.classList.remove("hidden");
     }
   }
@@ -1304,7 +1523,8 @@ export class UI {
     if (this.el.lcLeaderboard) this.el.lcLeaderboard.classList.add("hidden");
     if (this.el.lcRankBanner) this.el.lcRankBanner.classList.add("hidden");
     if (this.el.lcNameInput) {
-      this.el.lcNameInput.value = lastName || "";
+      const fromProfile = getActiveProfile().name;
+      this.el.lcNameInput.value = fromProfile || lastName || "";
       setTimeout(() => this.el.lcNameInput.focus(), 80);
     }
     if (this.el.lcCountry) {
@@ -1387,7 +1607,8 @@ export class UI {
       this.el.billboardExitHint.classList.add("hidden");
     }
     if (this.el.billboardLabel && label) {
-      this.el.billboardLabel.textContent = label;
+      this.el.billboardLabel.innerHTML =
+        `${label}<span class="billboard-baba">Baba &lt;3</span>`;
     }
     if (this.el.billboardBonus) {
       this.el.billboardBonus.classList.toggle("hidden", !showBonus);
@@ -1415,6 +1636,7 @@ export class UI {
         `<div class="billboard-placeholder">` +
         logoHtml +
         `<h3>${label}</h3>` +
+        `<span class="billboard-baba">Baba &lt;3</span>` +
         `<p>Demo opened in a new tab.</p>` +
         `<p class="billboard-placeholder-hint">Close this panel to resume the game.</p>` +
         `</div>`;
@@ -1449,8 +1671,9 @@ export class UI {
         `<div class="billboard-placeholder">` +
         logoHtml +
         `<h3>${label}</h3>` +
-        `<p>Interactive demo coming soon.</p>` +
-        `<p class="billboard-placeholder-hint">Check back — this side quest is being built.</p>` +
+        `<span class="billboard-baba">Baba &lt;3</span>` +
+        `<p>Great advice — remember it while you race!</p>` +
+        `<p class="billboard-placeholder-hint">Close this panel to get back on the track.</p>` +
         `</div>`;
     }
   }
@@ -1496,7 +1719,17 @@ export class UI {
         tdFlag.className = "lb-flag";
         tdFlag.textContent = this._countryFlag(entry.country);
         const tdName = document.createElement("td");
-        tdName.textContent = entry.name || "???";
+        tdName.className = "lb-name-cell";
+        const av = getAvatarById(entry.avatar);
+        if (av) {
+          const face = document.createElement("span");
+          face.className = "lb-avatar";
+          face.style.background = av.color || "#445";
+          face.textContent = av.emoji;
+          face.setAttribute("aria-hidden", "true");
+          tdName.appendChild(face);
+        }
+        tdName.appendChild(document.createTextNode(entry.name || "???"));
         const tdLevel = document.createElement("td");
         tdLevel.className = "lb-level";
         tdLevel.textContent = this._levelLabel(entry.level);
@@ -1563,6 +1796,34 @@ export class UI {
     this._toggleMenuButtons(true);
   }
 
+  _showMenuCollection() {
+    this.renderCollection();
+    if (this.el.menuCollection) this.el.menuCollection.classList.remove("hidden");
+    this._toggleMenuButtons(false);
+  }
+
+  _hideMenuCollection() {
+    if (this.el.menuCollection) this.el.menuCollection.classList.add("hidden");
+    this._toggleMenuButtons(true);
+  }
+
+  renderCollection() {
+    const grid = this.el.collectionGrid;
+    if (!grid) return;
+    const earned = new Set(getActiveProfile().rewards || []);
+    grid.innerHTML = "";
+    for (const d of REWARD_DEFS) {
+      const on = earned.has(d.id);
+      const card = document.createElement("div");
+      card.className = `collection-card ${on ? "unlocked" : "locked"}`;
+      card.innerHTML =
+        `<span class="collection-card-face" aria-hidden="true">${d.emoji}</span>` +
+        `<div><div class="collection-card-name">${escapeHtml(on ? d.name : d.name)}</div>` +
+        `<div class="collection-card-hint">${escapeHtml(on ? "Yours forever!" : d.hint)}</div></div>`;
+      grid.appendChild(card);
+    }
+  }
+
   _showMenuAchievements() {
     this.showAchievementsMenu(ACHIEVEMENT_DEFS, loadAchievements());
     this._toggleMenuButtons(false);
@@ -1598,65 +1859,12 @@ export class UI {
   async _fetchCredits() {
     const container = document.getElementById("credits-content");
     if (!container) return;
-    container.innerHTML = '<p style="text-align:center;color:var(--muted);padding:1rem">Loading\u2026</p>';
-
-    const REPO = "abwalczyk/ansible-f1";
-    const API = "https://api.github.com";
-
-    try {
-      const [repoRes, contribRes] = await Promise.all([
-        fetch(`${API}/repos/${REPO}`),
-        fetch(`${API}/repos/${REPO}/contributors?per_page=30`),
-      ]);
-
-      if (!repoRes.ok || !contribRes.ok) throw new Error("GitHub API error");
-
-      const repo = await repoRes.json();
-      const contributors = await contribRes.json();
-      this._creditsCache = { repo, contributors };
-
-      const totalCommits = contributors.reduce((s, c) => s + c.contributions, 0);
-      const created = new Date(repo.created_at).toLocaleDateString("en-US", {
-        year: "numeric", month: "long",
-      });
-
-      let html = "";
-
-      html += '<div class="credits-oss-blurb">';
-      html += "<p><strong>Built to Automate</strong> is an open-source arcade game built with Three.js.</p>";
-      html += "<p>Fork it, improve it, and submit a PR!</p>";
-      html += `<a href="https://github.com/${REPO}" target="_blank" rel="noopener" class="credits-gh-link">`;
-      html += '<span class="credits-gh-icon">&#9733;</span> View on GitHub</a>';
-      html += "</div>";
-
-      html += '<div class="credits-stats">';
-      html += `<div class="credits-stat"><span class="credits-stat-num">${totalCommits}</span><span class="credits-stat-label">Commits</span></div>`;
-      html += `<div class="credits-stat"><span class="credits-stat-num">${repo.stargazers_count}</span><span class="credits-stat-label">Stars</span></div>`;
-      html += `<div class="credits-stat"><span class="credits-stat-num">${repo.forks_count}</span><span class="credits-stat-label">Forks</span></div>`;
-      html += `<div class="credits-stat"><span class="credits-stat-num">${contributors.length}</span><span class="credits-stat-label">Contributors</span></div>`;
-      if (created) {
-        html += `<div class="credits-stat"><span class="credits-stat-num">${created}</span><span class="credits-stat-label">Created</span></div>`;
-      }
-      html += "</div>";
-
-      html += '<h4 class="credits-section-title">Contributors</h4>';
-      html += '<div class="credits-contributors">';
-      for (const c of contributors) {
-        html += '<a class="credits-contributor" href="' + c.html_url + '" target="_blank" rel="noopener">';
-        html += '<img class="credits-avatar" src="' + c.avatar_url + '&s=80" alt="" loading="lazy" />';
-        html += '<span class="credits-name">' + (c.login || "unknown") + "</span>";
-        html += '<span class="credits-commits">' + c.contributions + " commits</span>";
-        html += "</a>";
-      }
-      html += "</div>";
-
-      container.innerHTML = html;
-    } catch (err) {
-      container.innerHTML =
-        '<p style="text-align:center;color:var(--muted);padding:1rem">Could not load credits. ' +
-        '<a href="https://github.com/' + REPO + '" target="_blank" rel="noopener" ' +
-        'style="color:var(--neon)">Visit on GitHub</a></p>';
-    }
+    container.innerHTML =
+      '<div class="credits-oss-blurb">' +
+      "<p><strong>Life Skills Racers</strong> is a kid-friendly quiz racing game built with Three.js.</p>" +
+      "<p>Race through fun tracks, dodge puddles, collect stars and gems, and answer questions about money, safety, kindness, healthy habits, and responsibility.</p>" +
+      "<p>Made with Love by Baba &lt;3 for curious kids who like to learn while they play.</p>" +
+      "</div>";
   }
 
   /**
@@ -1878,7 +2086,9 @@ export class UI {
       "btn-start",
       "btn-choose-level-menu",
       "btn-choose-driver",
+      "btn-how-to-play",
       "btn-highscores",
+      "btn-collection",
       "btn-achievements",
       "btn-credits",
     ];
@@ -1886,6 +2096,7 @@ export class UI {
       const el = document.getElementById(id);
       if (el) el.classList.toggle("hidden", !visible);
     }
+    if (this.el.kidSetup) this.el.kidSetup.classList.toggle("hidden", !visible);
     this._syncSummitDockVisibility();
   }
 
@@ -1945,14 +2156,14 @@ export class UI {
     if (pbLabel[0]) {
       const v = document.getElementById("hud-playbooks")?.textContent || "0";
       const p = document.getElementById("hud-playbook-pts")?.textContent || "0 pts";
-      pbLabel[0].innerHTML = `Playbooks <span id="hud-playbooks">${v}</span><span class="hud-pickup-pts" id="hud-playbook-pts">${p}</span>`;
+      pbLabel[0].innerHTML = `${on ? "Estrellas" : "Stars"} <span id="hud-playbooks">${v}</span><span class="hud-pickup-pts" id="hud-playbook-pts">${p}</span>`;
     }
     if (pbLabel[1]) {
       const v = document.getElementById("hud-collections")?.textContent || "0";
       const p = document.getElementById("hud-collection-pts")?.textContent || "0 pts";
       pbLabel[1].innerHTML = on
-        ? `Colecciones <span id="hud-collections">${v}</span><span class="hud-pickup-pts" id="hud-collection-pts">${p}</span>`
-        : `Collections <span id="hud-collections">${v}</span><span class="hud-pickup-pts" id="hud-collection-pts">${p}</span>`;
+        ? `Gemas <span id="hud-collections">${v}</span><span class="hud-pickup-pts" id="hud-collection-pts">${p}</span>`
+        : `Gems <span id="hud-collections">${v}</span><span class="hud-pickup-pts" id="hud-collection-pts">${p}</span>`;
     }
     this.el.playbookCount = document.getElementById("hud-playbooks");
     this.el.playbookPts = document.getElementById("hud-playbook-pts");
@@ -1968,7 +2179,7 @@ export class UI {
     const ttLabel = document.querySelector("#tt-cooldown-bar > span");
     if (ttLabel) ttLabel.textContent = on ? "⚡ Capacitor de flujo" : "⚡ Flux Capacitor";
 
-    _swap("#quiz-title", "Skill Check", "Prueba de habilidad");
+    _swap("#quiz-title", "Life Skills Quiz", "Prueba de vida diaria");
     const pauseTitle = document.querySelector("#pause-menu h2");
     if (pauseTitle) pauseTitle.textContent = on ? "Pausado" : "Paused";
     _swap("#btn-resume", "Resume", "Continuar");
@@ -1992,37 +2203,31 @@ export class UI {
     });
 
     const statHint = document.querySelector(".hud-stat-hint");
-    if (statHint) statHint.textContent = on
-      ? "Tu medidor de carrera — los cortes lo bajan. En 0, fin del juego."
-      : "Your run meter \u2014 outages drain it. At 0, game over.";
+    if (statHint) statHint.textContent = DISPLAY.HEALTH_HINT;
 
     const legendMap = [
-      ["Outage", "hazard \u00b7 dodge it", "Corte", "peligro \u00b7 esquivalo"],
-      ["Rival car", "dodge or crash", "Auto rival", "esquivá o chocá"],
-      ["Playbook", "+100 score", "Playbook", "+100 puntos"],
-      ["Collection", "+150 score", "Colecci\u00f3n", "+150 puntos"],
-      ["Shield", "blocks next hit", "Escudo", "bloquea el pr\u00f3ximo golpe"],
-      ["Boost token", "quiz for speed", "Token de turbo", "prueba de velocidad"],
+      [DISPLAY.OBSTACLE, "hazard \u00b7 dodge it"],
+      [DISPLAY.RIVAL, "dodge or crash"],
+      [DISPLAY.STAR, "+100 score"],
+      [DISPLAY.GEM, "+150 score"],
+      [DISPLAY.SHIELD, "blocks next hit"],
+      [DISPLAY.BOOST, "life-skills quiz for speed"],
     ];
     const rows = document.querySelectorAll(".legend-row:not(.legend-flow-row):not(.quiz-toggle-row)");
     legendMap.forEach((entry, i) => {
       if (!rows[i]) return;
       const sp = rows[i].querySelector("span:last-child");
-      if (sp) sp.innerHTML = on
-        ? `<strong>${entry[2]}</strong> \u2014 ${entry[3]}`
-        : `<strong>${entry[0]}</strong> \u2014 ${entry[1]}`;
+      if (sp) sp.innerHTML = `<strong>${entry[0]}</strong> \u2014 ${entry[1]}`;
     });
     const flowLegend = document.querySelector(".legend-flow-row span:last-child");
-    if (flowLegend) flowLegend.innerHTML = on
-      ? "<strong>Flujo de automatizaci\u00f3n</strong> \u2014 3 respuestas correctas seguidas activa 8s de 1.2\u00d7 puntos + im\u00e1n"
-      : "<strong>Automation Flow</strong> \u2014 3 correct answers in a row triggers 8s of 1.2\u00d7 score + pickup magnet";
+    if (flowLegend) flowLegend.innerHTML = `<strong>${DISPLAY.FLOW}</strong> \u2014 ${DISPLAY.FLOW_HINT}`;
     const quizLabel = document.querySelector(".quiz-toggle-row span");
     if (quizLabel) quizLabel.textContent = on ? "Modo prueba" : "Quiz Mode";
 
     const recoveryTitle = document.querySelector("#recovery-overlay h3");
-    if (recoveryTitle) recoveryTitle.textContent = on ? "\u00bf Intentar remediaci\u00f3n?" : "Attempt remediation?";
+    if (recoveryTitle) recoveryTitle.textContent = on ? "¿Segunda oportunidad?" : "Second Chance?";
     const recoveryHint = document.querySelector("#recovery-overlay .hint");
-    if (recoveryHint) recoveryHint.textContent = on ? "Respond\u00e9 una prueba para recuperar salud." : "Answer a skill check to recover health.";
+    if (recoveryHint) recoveryHint.textContent = on ? "Responde una pregunta para recuperar energía." : "Answer a life-skills question to recover energy.";
     _swap("#recovery-yes", "Yes", "S\u00ed");
     _swap("#recovery-no", "No", "No");
     const quizHint = document.querySelector("#quiz-overlay .hint");
@@ -2198,10 +2403,8 @@ export class UI {
       ctx.fillStyle = "#2a3048";
       ctx.fillRect(4, 14, 12, 28); ctx.fillRect(20, 10, 10, 32);
       ctx.fillRect(W - 30, 8, 14, 34); ctx.fillRect(W - 14, 16, 10, 26);
-      ctx.fillStyle = "#7a8a9a";
+      ctx.fillStyle = "#3a4558";
       ctx.fillRect(W - 42, 4, 8, 38);
-      ctx.fillStyle = "#cc0000";
-      ctx.fillRect(W - 41, 4, 6, 3);
     } else if (s === "forest") {
       ctx.fillStyle = "#5c3a1a";
       for (const x of [12, 30, W - 28, W - 12]) ctx.fillRect(x, midY - 16, 2, 16);
@@ -2269,17 +2472,14 @@ export class UI {
       ctx.fillStyle = "#2a3048";
       ctx.fillRect(4, 16, 10, 26); ctx.fillRect(18, 12, 8, 30);
       ctx.fillRect(W - 24, 14, 12, 28); ctx.fillRect(W - 10, 18, 8, 24);
-      // Ansible tower
       ctx.fillStyle = "#4a5a6a";
       ctx.fillRect(W * 0.42, 4, 10, 38);
-      ctx.fillStyle = "#ee1100";
-      ctx.fillRect(W * 0.43, 2, 8, 3);
       // Water tower
       ctx.fillStyle = "#6a6a6a";
       ctx.fillRect(W * 0.28, 14, 1, 16); ctx.fillRect(W * 0.34, 14, 1, 16);
       ctx.fillStyle = "#ccccbb";
       ctx.fillRect(W * 0.26, 8, 12, 7);
-      ctx.fillStyle = "#cc2200";
+      ctx.fillStyle = "#44aacc";
       ctx.fillRect(W * 0.27, 10, 10, 2);
       // Smokestack
       ctx.fillStyle = "#884422";
